@@ -10,6 +10,8 @@ import java.util.Map;
 
 /** Offline Hepburn-style kana transliteration. No Android dependencies. */
 public final class KanaTransliterator {
+    public enum RomanizationStyle { SIMPLE, MACRON }
+
     public static final class Token {
         public final String kana;
         public final String romaji;
@@ -46,71 +48,24 @@ public final class KanaTransliterator {
         }
     }
 
-    private static final Map<String, String> KANA = new HashMap<>(192);
-    private static final Map<String, String> COMBOS = new HashMap<>(128);
-    private static final Map<String, Word> DICTIONARY = new HashMap<>(128);
+    public static final class DictionaryEntry {
+        public final String word;
+        public final String reading;
+        public final String translationPt;
+        public final String translationEn;
 
-    private static final class Word {
-        final String reading;
-        final String translationPt;
-        final String translationEn;
-
-        Word(String reading, String translationPt, String translationEn) {
+        DictionaryEntry(String word, String reading, String translationPt, String translationEn) {
+            this.word = word;
             this.reading = reading;
             this.translationPt = translationPt;
             this.translationEn = translationEn;
         }
     }
 
+    private static final Map<String, DictionaryEntry> DICTIONARY = new HashMap<>(128);
+    private static final List<DictionaryEntry> DICTIONARY_ENTRIES = new ArrayList<>(96);
+
     static {
-        addRows(
-            "あ:a い:i う:u え:e お:o か:ka き:ki く:ku け:ke こ:ko " +
-            "さ:sa し:shi す:su せ:se そ:so た:ta ち:chi つ:tsu て:te と:to " +
-            "な:na に:ni ぬ:nu ね:ne の:no は:ha ひ:hi ふ:fu へ:he ほ:ho " +
-            "ま:ma み:mi む:mu め:me も:mo や:ya ゆ:yu よ:yo " +
-            "ら:ra り:ri る:ru れ:re ろ:ro わ:wa ゐ:wi ゑ:we を:wo ん:n " +
-            "が:ga ぎ:gi ぐ:gu げ:ge ご:go ざ:za じ:ji ず:zu ぜ:ze ぞ:zo " +
-            "だ:da ぢ:ji づ:zu で:de ど:do ば:ba び:bi ぶ:bu べ:be ぼ:bo " +
-            "ぱ:pa ぴ:pi ぷ:pu ぺ:pe ぽ:po ゔ:vu " +
-            "ぁ:a ぃ:i ぅ:u ぇ:e ぉ:o ゃ:ya ゅ:yu ょ:yo ゎ:wa ゕ:ka ゖ:ke " +
-            "っ: ー: ゝ: ゞ: "
-        );
-
-        // Katakana is algorithmically parallel to hiragana, including rare kana.
-        Map<String, String> snapshot = new HashMap<>(KANA);
-        for (Map.Entry<String, String> e : snapshot.entrySet()) {
-            int cp = e.getKey().codePointAt(0);
-            if (cp >= 0x3041 && cp <= 0x3096) {
-                KANA.put(new String(Character.toChars(cp + 0x60)), e.getValue());
-            }
-        }
-        addRows("ヷ:va ヸ:vi ヹ:ve ヺ:vo ヵ:ka ヶ:ke ヮ:wa ヽ: ヾ: ヿ:koto " +
-            "ㇰ:ku ㇱ:shi ㇲ:su ㇳ:to ㇴ:nu ㇵ:ha ㇶ:hi ㇷ:fu ㇸ:he ㇹ:ho " +
-            "ㇺ:mu ㇻ:ra ㇼ:ri ㇽ:ru ㇾ:re ㇿ:ro " +
-            "・:· 。:. 、:, 「:\u201c 」:\u201d 『:\u201c 』:\u201d ！:! ？:?　: ");
-
-        addCombos(
-            "きゃ:kya きゅ:kyu きょ:kyo ぎゃ:gya ぎゅ:gyu ぎょ:gyo " +
-            "しゃ:sha しゅ:shu しょ:sho じゃ:ja じゅ:ju じょ:jo " +
-            "ちゃ:cha ちゅ:chu ちょ:cho ぢゃ:ja ぢゅ:ju ぢょ:jo " +
-            "にゃ:nya にゅ:nyu にょ:nyo ひゃ:hya ひゅ:hyu ひょ:hyo " +
-            "びゃ:bya びゅ:byu びょ:byo ぴゃ:pya ぴゅ:pyu ぴょ:pyo " +
-            "みゃ:mya みゅ:myu みょ:myo りゃ:rya りゅ:ryu りょ:ryo " +
-            "いぇ:ye うぃ:wi うぇ:we うぉ:wo " +
-            "ゔぁ:va ゔぃ:vi ゔぇ:ve ゔぉ:vo ゔゅ:vyu " +
-            "しぇ:she じぇ:je ちぇ:che " +
-            "てぃ:ti でぃ:di とぅ:tu どぅ:du てゅ:tyu でゅ:dyu " +
-            "ふぁ:fa ふぃ:fi ふぇ:fe ふぉ:fo ふゅ:fyu " +
-            "つぁ:tsa つぃ:tsi つぇ:tse つぉ:tso " +
-            "くぁ:kwa くぃ:kwi くぇ:kwe くぉ:kwo くゎ:kwa " +
-            "ぐぁ:gwa ぐぃ:gwi ぐぇ:gwe ぐぉ:gwo ぐゎ:gwa " +
-            "すぃ:si ずぃ:zi "
-        );
-        Map<String, String> comboSnapshot = new HashMap<>(COMBOS);
-        for (Map.Entry<String, String> e : comboSnapshot.entrySet()) {
-            COMBOS.put(toKatakana(e.getKey()), e.getValue());
-        }
-
         addWord("あい", "amor", "love");
         addWord("あお", "azul", "blue");
         addWord("あか", "vermelho", "red");
@@ -206,6 +161,11 @@ public final class KanaTransliterator {
     private KanaTransliterator() {}
 
     public static Result transliterate(String source) {
+        return transliterate(source, RomanizationStyle.SIMPLE);
+    }
+
+    public static Result transliterate(String source, RomanizationStyle style) {
+        RomanizationStyle selectedStyle = style == null ? RomanizationStyle.SIMPLE : style;
         // NFKC also converts half-width katakana (e.g. ｶﾀｶﾅ) to standard katakana.
         String input = Normalizer.normalize(source == null ? "" : source, Normalizer.Form.NFKC);
         List<Token> tokens = new ArrayList<>();
@@ -230,8 +190,13 @@ public final class KanaTransliterator {
 
             if ("ー".equals(current)) {
                 String vowel = finalVowel(output);
-                output.append(vowel);
-                tokens.add(makeToken(current, vowel, "Prolonga a vogal anterior", "Lengthens the previous vowel"));
+                String displayedVowel = vowel;
+                if (selectedStyle == RomanizationStyle.MACRON && replaceFinalVowelWithMacron(output)) {
+                    displayedVowel = macronFor(vowel);
+                } else {
+                    output.append(vowel);
+                }
+                tokens.add(makeToken(current, displayedVowel, "Prolonga a vogal anterior", "Lengthens the previous vowel"));
                 previousRomaji = vowel;
                 i += currentLength;
                 continue;
@@ -255,14 +220,14 @@ public final class KanaTransliterator {
                 int nextCp = input.codePointAt(i + currentLength);
                 String next = new String(Character.toChars(nextCp));
                 String candidate = current + next;
-                if (COMBOS.containsKey(candidate)) {
+                if (KanaData.comboReading(candidate) != null) {
                     pair = candidate;
                     pairLength += next.length();
                 }
             }
 
             String unit = pair != null ? pair : current;
-            String romaji = pair != null ? COMBOS.get(pair) : KANA.get(current);
+            String romaji = pair != null ? KanaData.comboReading(pair) : KanaData.readingFor(current);
             if (romaji == null) {
                 romaji = current;
             }
@@ -275,17 +240,36 @@ public final class KanaTransliterator {
                 }
             }
 
-            output.append(romaji);
+            boolean macronized = selectedStyle == RomanizationStyle.MACRON
+                && ("u".equals(romaji) || "o".equals(romaji))
+                && previousRomaji.endsWith("o")
+                && replaceTrailing(output, 'o', 'ō');
+            if (!macronized) output.append(romaji);
             tokens.add(makeToken(unit, romaji, null, null));
             if (isKana(current) && !romaji.trim().isEmpty()) previousRomaji = romaji;
             i += pairLength;
         }
 
-        Word word = DICTIONARY.get(input.trim());
+        DictionaryEntry word = DICTIONARY.get(input.trim());
         String romaji = word != null && !word.reading.isEmpty() ? word.reading : output.toString();
+        if (selectedStyle == RomanizationStyle.MACRON && word != null && !word.reading.isEmpty()) {
+            romaji = macronizeKnownReading(romaji);
+        }
         String pt = word == null ? "" : word.translationPt;
         String en = word == null ? "" : word.translationEn;
         return new Result(input, romaji, tokens, pt, en);
+    }
+
+    public static String toKatakana(String source) {
+        return KanaData.toKatakana(source);
+    }
+
+    public static String toHiragana(String source) {
+        return KanaData.toHiragana(source);
+    }
+
+    public static List<DictionaryEntry> dictionaryEntries() {
+        return Collections.unmodifiableList(DICTIONARY_ENTRIES);
     }
 
     private static Token makeToken(String kana, String romaji, String overridePt, String overrideEn) {
@@ -328,9 +312,10 @@ public final class KanaTransliterator {
         if (nextIndex < input.length()) {
             int cp2 = input.codePointAt(nextIndex);
             String pair = first + new String(Character.toChars(cp2));
-            if (COMBOS.containsKey(pair)) return COMBOS.get(pair);
+            String combo = KanaData.comboReading(pair);
+            if (combo != null) return combo;
         }
-        String value = KANA.get(first);
+        String value = KanaData.readingFor(first);
         return value == null ? "" : value;
     }
 
@@ -353,6 +338,37 @@ public final class KanaTransliterator {
         return "";
     }
 
+    private static boolean replaceFinalVowelWithMacron(StringBuilder output) {
+        if (output.length() == 0) return false;
+        int index = output.length() - 1;
+        char vowel = Character.toLowerCase(output.charAt(index));
+        String macron = macronFor(String.valueOf(vowel));
+        if (macron.equals(String.valueOf(vowel))) return false;
+        output.replace(index, index + 1, macron);
+        return true;
+    }
+
+    private static boolean replaceTrailing(StringBuilder output, char expected, char replacement) {
+        if (output.length() == 0 || output.charAt(output.length() - 1) != expected) return false;
+        output.setCharAt(output.length() - 1, replacement);
+        return true;
+    }
+
+    private static String macronFor(String vowel) {
+        if ("a".equals(vowel)) return "ā";
+        if ("i".equals(vowel)) return "ī";
+        if ("u".equals(vowel)) return "ū";
+        if ("e".equals(vowel)) return "ē";
+        if ("o".equals(vowel)) return "ō";
+        return vowel;
+    }
+
+    private static String macronizeKnownReading(String reading) {
+        return reading.replace("ou", "ō").replace("oo", "ō")
+            .replace("aa", "ā").replace("ii", "ī")
+            .replace("uu", "ū").replace("ee", "ē");
+    }
+
     private static String voice(String roma) {
         if (roma == null || roma.isEmpty()) return "";
         if (roma.startsWith("k")) return "g" + roma.substring(1);
@@ -365,39 +381,19 @@ public final class KanaTransliterator {
     private static boolean isSmallTsu(String s) { return "っ".equals(s) || "ッ".equals(s); }
     private static boolean isIterationMark(String s) { return "ゝ".equals(s) || "ゞ".equals(s) || "ヽ".equals(s) || "ヾ".equals(s); }
     private static boolean isKana(String s) { return s != null && !s.isEmpty() && (isHiragana(s.codePointAt(0)) || isKatakana(s.codePointAt(0))); }
-    private static boolean isHiragana(int cp) { return cp >= 0x3040 && cp <= 0x309F; }
-    private static boolean isKatakana(int cp) { return (cp >= 0x30A0 && cp <= 0x30FF) || (cp >= 0x31F0 && cp <= 0x31FF); }
-
-    private static String toKatakana(String hiragana) {
-        StringBuilder result = new StringBuilder();
-        for (int i = 0; i < hiragana.length();) {
-            int cp = hiragana.codePointAt(i);
-            if (cp >= 0x3041 && cp <= 0x3096) cp += 0x60;
-            result.appendCodePoint(cp);
-            i += Character.charCount(cp);
-        }
-        return result.toString();
-    }
-
-    private static void addRows(String encoded) {
-        for (String item : encoded.split(" ")) {
-            int colon = item.indexOf(':');
-            if (colon >= 0) KANA.put(item.substring(0, colon), item.substring(colon + 1));
-        }
-    }
-
-    private static void addCombos(String encoded) {
-        for (String item : encoded.split(" ")) {
-            int colon = item.indexOf(':');
-            if (colon >= 0) COMBOS.put(item.substring(0, colon), item.substring(colon + 1));
-        }
-    }
+    private static boolean isHiragana(int cp) { return KanaData.isHiragana(cp); }
+    private static boolean isKatakana(int cp) { return KanaData.isKatakana(cp); }
 
     private static void addWord(String kana, String pt, String en) {
-        DICTIONARY.put(kana, new Word("", pt, en));
+        addDictionaryEntry(new DictionaryEntry(kana, "", pt, en));
     }
 
     private static void addKanjiWord(String kanji, String reading, String pt, String en) {
-        DICTIONARY.put(kanji, new Word(reading, pt, en));
+        addDictionaryEntry(new DictionaryEntry(kanji, reading, pt, en));
+    }
+
+    private static void addDictionaryEntry(DictionaryEntry entry) {
+        DICTIONARY.put(entry.word, entry);
+        DICTIONARY_ENTRIES.add(entry);
     }
 }

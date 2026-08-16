@@ -31,6 +31,7 @@ $UnsignedApk = Join-Path $BuildDir "KanaBridge-unsigned.apk"
 $AlignedApk = Join-Path $BuildDir "KanaBridge-aligned.apk"
 $DistDir = Join-Path $ProjectRoot "dist"
 $FinalApk = Join-Path $DistDir "KanaBridge.apk"
+$SignatureSidecar = "$FinalApk.idsig"
 $ToolsDir = Join-Path $ProjectRoot "tools"
 $Keystore = Join-Path $ToolsDir "kanabridge-release.jks"
 
@@ -111,7 +112,7 @@ if ($CompiledResources.Count -eq 0) {
 $LinkArguments = @(
     "link", "-I", $AndroidJar, "--manifest", $Manifest,
     "--min-sdk-version", $MinSdk, "--target-sdk-version", "35",
-    "--version-code", "1", "--version-name", "1.0.0",
+    "--version-code", "2", "--version-name", "2.0.0",
     "-o", $UnsignedApk
 )
 foreach ($Resource in $CompiledResources) {
@@ -142,10 +143,12 @@ if (-not (Test-Path -LiteralPath $Keystore -PathType Leaf)) {
 $env:KANABRIDGE_KEYSTORE_PASSWORD = $SigningPassword
 try {
     Write-Host "A assinar APK..."
+    Remove-Item -LiteralPath $SignatureSidecar -Force -ErrorAction SilentlyContinue
     Invoke-Tool "apksigner" $Apksigner @(
         "sign", "--ks", $Keystore, "--ks-key-alias", "kanabridge",
         "--ks-pass", "env:KANABRIDGE_KEYSTORE_PASSWORD",
         "--key-pass", "env:KANABRIDGE_KEYSTORE_PASSWORD",
+        "--v4-signing-enabled", "false",
         "--out", $FinalApk, $AlignedApk
     )
 } finally {
