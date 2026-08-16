@@ -1,0 +1,9 @@
+# Artefactos de compilação locais
+/build/
+/dist/
+
+# Chave de assinatura local (necessária para futuras atualizações da app)
+/tools/kanabridge-release.jks
+
+# SDK descarregado pelo antigo auxiliar Unix, se for usado
+/.android-sdk/
