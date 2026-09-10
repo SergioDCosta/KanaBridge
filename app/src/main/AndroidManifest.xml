@@ -1,9 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.kanabridge">
-    <uses-sdk android:minSdkVersion="23" android:targetSdkVersion="35" />
+    <uses-sdk android:minSdkVersion="23" android:targetSdkVersion="36" />
+    <queries>
+        <intent><action android:name="android.intent.action.TTS_SERVICE" /></intent>
+    </queries>
     <application
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:icon="@drawable/ic_launcher"
         android:label="KanaBridge"
         android:roundIcon="@drawable/ic_launcher"
@@ -13,6 +16,9 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:enableOnBackInvokedCallback="true"
+            android:resizeableActivity="true"
+            android:windowSoftInputMode="adjustResize"
             android:screenOrientation="unspecified">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
