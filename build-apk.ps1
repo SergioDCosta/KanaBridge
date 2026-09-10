@@ -1,19 +1,19 @@
+param([switch]$Preview)
 $ErrorActionPreference = "Stop"
 
-# Builds KanaBridge with the Android SDK already installed in C:\Android.
-# A valid ANDROID_SDK_ROOT takes precedence when it contains platform android-35.
+# Android 16 / API 36. An explicit SDK root takes precedence over the local SDK.
 $ProjectRoot = $PSScriptRoot
-$DefaultSdkRoot = "C:\Android"
+$DefaultSdkRoot = if (Test-Path (Join-Path $ProjectRoot '.tooling\android-sdk')) { Join-Path $ProjectRoot '.tooling\android-sdk' } else { "C:\Android" }
 $SdkRoot = if ($env:ANDROID_SDK_ROOT -and
-    (Test-Path -LiteralPath (Join-Path $env:ANDROID_SDK_ROOT "platforms\android-35\android.jar") -PathType Leaf)) {
+    (Test-Path -LiteralPath (Join-Path $env:ANDROID_SDK_ROOT "platforms\android-36\android.jar") -PathType Leaf)) {
     $env:ANDROID_SDK_ROOT
 } else {
     $DefaultSdkRoot
 }
-$BuildToolsVersion = "35.0.0"
+$BuildToolsVersion = "36.0.0"
 $MinSdk = "23"
 
-$AndroidJar = Join-Path $SdkRoot "platforms\android-35\android.jar"
+$AndroidJar = Join-Path $SdkRoot "platforms\android-36\android.jar"
 $BuildTools = Join-Path $SdkRoot "build-tools\$BuildToolsVersion"
 $D8 = Join-Path $BuildTools "d8.bat"
 $Aapt2 = Join-Path $BuildTools "aapt2.exe"
@@ -23,14 +23,15 @@ $Apksigner = Join-Path $BuildTools "apksigner.bat"
 $JavaSourceDir = Join-Path $ProjectRoot "app\src\main\java"
 $ResourceDir = Join-Path $ProjectRoot "app\src\main\res"
 $Manifest = Join-Path $ProjectRoot "app\src\main\AndroidManifest.xml"
-$BuildDir = Join-Path $ProjectRoot "build\apk"
+$BuildSubdir = if ($Preview) { 'build\apk-preview' } else { 'build\apk' }
+$BuildDir = Join-Path $ProjectRoot $BuildSubdir
 $ClassesDir = Join-Path $BuildDir "classes"
 $DexDir = Join-Path $BuildDir "dex"
 $CompiledResourcesDir = Join-Path $BuildDir "compiled-res"
 $UnsignedApk = Join-Path $BuildDir "KanaBridge-unsigned.apk"
 $AlignedApk = Join-Path $BuildDir "KanaBridge-aligned.apk"
 $DistDir = Join-Path $ProjectRoot "dist"
-$FinalApk = Join-Path $DistDir "KanaBridge.apk"
+$FinalApk = Join-Path $DistDir $(if ($Preview) { 'KanaBridge-preview.apk' } else { 'KanaBridge.apk' })
 $SignatureSidecar = "$FinalApk.idsig"
 $ToolsDir = Join-Path $ProjectRoot "tools"
 $Keystore = Join-Path $ToolsDir "kanabridge-release.jks"
@@ -38,21 +39,31 @@ $Keystore = Join-Path $ToolsDir "kanabridge-release.jks"
 function Require-Command([string]$Name) {
     $command = Get-Command $Name -ErrorAction SilentlyContinue
     if ($null -eq $command) {
-        throw "Java não foi encontrado: falta '$Name' no PATH. Instale/configure o JDK 21 e abra uma nova janela PowerShell."
+        throw "Java não foi encontrado: falta '$Name' no PATH. Instale/configure o JDK 17 ou 21 e abra uma nova janela PowerShell."
     }
     return $command.Source
 }
 
 function Require-File([string]$Path, [string]$Description) {
     if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
-        throw "$Description não foi encontrado em: $Path`nConfirme que o Android SDK 35 está instalado em '$SdkRoot' ou defina ANDROID_SDK_ROOT."
+        throw "$Description não foi encontrado em: $Path`nConfirme que o Android SDK 36 está instalado em '$SdkRoot' ou defina ANDROID_SDK_ROOT."
     }
 }
 
 function Invoke-Tool([string]$Description, [string]$Path, [string[]]$Arguments) {
-    & $Path @Arguments
-    if ($LASTEXITCODE -ne 0) {
-        throw "$Description falhou (código de saída $LASTEXITCODE)."
+    # aapt2 on Windows cannot reliably open absolute paths containing accents.
+    # Keep project arguments relative and run every tool from the project root.
+    $PortableArguments = @($Arguments | ForEach-Object {
+        if ($_.StartsWith($ProjectRoot + [IO.Path]::DirectorySeparatorChar)) { $_.Substring($ProjectRoot.Length + 1) } else { $_ }
+    })
+    Push-Location -LiteralPath $ProjectRoot
+    try {
+        & $Path @PortableArguments
+        if ($LASTEXITCODE -ne 0) {
+            throw "$Description falhou (código de saída $LASTEXITCODE)."
+        }
+    } finally {
+        Pop-Location
     }
 }
 
@@ -74,9 +85,17 @@ if ($JavaSources.Count -eq 0) {
 }
 
 if (Test-Path -LiteralPath $BuildDir) {
+    $ResolvedBuild = (Resolve-Path -LiteralPath $BuildDir).Path
+    $ExpectedBuild = [IO.Path]::GetFullPath((Join-Path $ProjectRoot $BuildSubdir))
+    if ($ResolvedBuild -ne $ExpectedBuild -or -not $ResolvedBuild.StartsWith($ProjectRoot + [IO.Path]::DirectorySeparatorChar)) { throw 'Build path is outside the project.' }
     Remove-Item -LiteralPath $BuildDir -Recurse -Force
 }
 New-Item -ItemType Directory -Force -Path $ClassesDir, $DexDir, $CompiledResourcesDir, $DistDir, $ToolsDir | Out-Null
+if ($Preview) {
+    $PreviewManifest = Join-Path $BuildDir 'AndroidManifest.xml'
+    (Get-Content -LiteralPath $Manifest -Raw).Replace('package="com.kanabridge"', 'package="com.kanabridge.preview"').Replace('android:name=".MainActivity"', 'android:name="com.kanabridge.MainActivity"').Replace('android:label="KanaBridge"', 'android:label="KanaBridge 3"') | Set-Content -LiteralPath $PreviewManifest -Encoding utf8
+    $Manifest = $PreviewManifest
+}
 
 Write-Host "A compilar Java..."
 $JavacArguments = @(
@@ -111,8 +130,8 @@ if ($CompiledResources.Count -eq 0) {
 
 $LinkArguments = @(
     "link", "-I", $AndroidJar, "--manifest", $Manifest,
-    "--min-sdk-version", $MinSdk, "--target-sdk-version", "35",
-    "--version-code", "2", "--version-name", "2.0.0",
+    "--min-sdk-version", $MinSdk, "--target-sdk-version", "36",
+    "--version-code", "3", "--version-name", "3.0.0",
     "-o", $UnsignedApk
 )
 foreach ($Resource in $CompiledResources) {
@@ -156,3 +175,4 @@ try {
 }
 
 Write-Host "APK criado: $FinalApk"
+Invoke-Tool "Verificação da assinatura" $Apksigner @("verify", "--verbose", $FinalApk)

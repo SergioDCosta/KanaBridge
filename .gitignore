@@ -1,6 +1,7 @@
 # Artefactos de compilação locais
 /build/
 /dist/
+/.tooling/
 
 # Chave de assinatura local (necessária para futuras atualizações da app)
 /tools/kanabridge-release.jks
