@@ -5,7 +5,27 @@ public final class KanaTransliteratorTest {
 
     public static void main(String[] args) {
         expect("あ", "a");
-        expect("こんにちは", "konnichiha");
+        expect("こんにちは", "konnichiwa");
+        expect("こんばんは", "konbanwa");
+        expect("こんにちは。", "konnichiwa。");
+        expect("  学校! ", "  gakkou! ");
+        expect("いらっしゃいませ", "irasshaimase");
+        expect("イラッシャイマセ", "irasshaimase");
+        expect("いらっしゃいませ！", "irasshaimase！");
+        expect("ざっし", "zasshi");
+        expect("きって", "kitte");
+        expect("きっぷ", "kippu");
+        expect("しゞ", "shiji");
+        expect("ちゞ", "chiji");
+        expect("ふゞ", "fubu");
+        expect("がゝ", "gaka");
+        expect("か ゝ", "ka ゝ");
+        expect("っ", "っ");
+        expect("っあ", "っa");
+        expect("ー", "ー");
+        expect("か。ー", "ka。ー");
+        expect("ABC １２３。", "ABC １２３。");
+        expect("😀かな", "😀kana");
         expect("が", "ga");
         expect("ぱ", "pa");
         expect("がっこう", "gakkou");
@@ -34,13 +54,46 @@ public final class KanaTransliteratorTest {
         convertToHiragana("ヽヾ", "ゝゞ");
         macron("がっこう", "gakkō");
         macron("スーパー", "sūpā");
+        macron("コーヒー", "kōhī");
+        macron("すうがく", "sūgaku");
+        macron("とうきょう", "tōkyō");
+        macron("おもう", "omou");
+        macron("かわいい", "kawaii");
+        macron("学校。", "gakkō。");
         search("shi", "し", "シ");
         search("きゃ", "きゃ", "キャ");
         search("va", "ゔぁ", "ヴァ");
+        search("ゐ", "ゐ", "ヰ");
+        search("ヶ", "ゖ", "ヶ");
+        dictionarySearch("cafe", "コーヒー");
+        dictionarySearch("gakkō", "がっこう");
+        dictionarySearch("ｺｰﾋｰ", "コーヒー");
+        dictionarySearch("irasshaimase", "いらっしゃいませ");
+        check(KanaTransliterator.transliterate("日本語 あ").partial, "mixed text is partial");
+        check(!KanaTransliterator.transliterate("日本語").partial, "known word is complete");
+        check(KanaTransliterator.transliterate("っ").partial, "isolated sokuon preserved");
+        KanaTransliterator.Result welcome = KanaTransliterator.transliterate("いらっしゃいませ");
+        boolean sokuon = false;
+        for (KanaTransliterator.Token token : welcome.tokens) {
+            if (token.kana.equals("っ")) sokuon = token.romaji.equals("s") && token.notePt.contains("ssha");
+        }
+        check(sokuon, "sokuon token explains the s in irasshaimase");
+        check(welcome.translationPt.contains("atendimento"), "welcome context");
         category(KanaData.DAKUTEN, 25);
         category(KanaData.YOON, 30);
         category(KanaData.AINU, 16);
         System.out.println("OK: " + tests + " testes");
+    }
+
+    private static void check(boolean value, String message) {
+        if (!value) throw new AssertionError(message);
+        tests++;
+    }
+    private static void dictionarySearch(String query, String word) {
+        boolean found = false;
+        for (KanaTransliterator.DictionaryEntry entry : KanaTransliterator.searchDictionary(query))
+            if (entry.word.equals(word)) found = true;
+        check(found, "dictionary search: " + query);
     }
 
     private static void expect(String input, String expected) {

@@ -37,6 +37,7 @@ public final class KanaTransliterator {
         public final List<Token> tokens;
         public final String translationPt;
         public final String translationEn;
+        public final boolean partial;
 
         Result(String original, String romaji, List<Token> tokens,
                String translationPt, String translationEn) {
@@ -45,6 +46,7 @@ public final class KanaTransliterator {
             this.tokens = Collections.unmodifiableList(tokens);
             this.translationPt = translationPt;
             this.translationEn = translationEn;
+            this.partial = containsJapanese(romaji);
         }
     }
 
@@ -132,6 +134,13 @@ public final class KanaTransliterator {
         addWord("ホテル", "hotel", "hotel");
         addWord("レストラン", "restaurante", "restaurant");
         addWord("バイク", "mota", "motorbike");
+        addWord("いらっしゃいませ", "bem-vindo/a (saudação de atendimento em lojas e restaurantes)", "welcome (staff greeting in shops and restaurants)");
+        addWord("きって", "selo postal", "postage stamp");
+        addWord("まっちゃ", "matcha / chá verde em pó", "matcha / powdered green tea");
+        addWord("ざっし", "revista", "magazine");
+        addWord("きっぷ", "bilhete", "ticket");
+        addWord("すうがく", "matemática", "mathematics");
+        addWord("とうきょう", "Tóquio", "Tokyo");
 
         // Leituras de palavras completas em kanji de nível inicial. Kanji isolado pode
         // ter mais do que uma leitura; por isso apenas reconhecemos entradas exatas.
@@ -167,10 +176,14 @@ public final class KanaTransliterator {
     public static Result transliterate(String source, RomanizationStyle style) {
         RomanizationStyle selectedStyle = style == null ? RomanizationStyle.SIMPLE : style;
         // NFKC also converts half-width katakana (e.g. ｶﾀｶﾅ) to standard katakana.
-        String input = Normalizer.normalize(source == null ? "" : source, Normalizer.Form.NFKC);
+        String input = normalizeKana(source);
         List<Token> tokens = new ArrayList<>();
         StringBuilder output = new StringBuilder();
-        String previousRomaji = "";
+        String previousKana = "";
+        String core = input.trim().replaceAll("[。！？!?.,、]+$", "");
+        DictionaryEntry known = DICTIONARY.get(core);
+        boolean greeting = "こんにちは".equals(core) || "こんばんは".equals(core);
+        int coreStart = input.indexOf(core);
 
         for (int i = 0; i < input.length();) {
             int cp = input.codePointAt(i);
@@ -181,35 +194,41 @@ public final class KanaTransliterator {
                 int nextIndex = i + currentLength;
                 String nextRomaji = romajiAt(input, nextIndex);
                 String doubled = doubledConsonant(nextRomaji);
-                output.append(doubled);
-                tokens.add(makeToken(current, doubled, "Marca consoante dupla", "Double-consonant marker"));
-                previousRomaji = doubled;
+                output.append(doubled.isEmpty() ? current : doubled);
+                tokens.add(makeToken(current, doubled.isEmpty() ? current : doubled,
+                    doubled.isEmpty() ? "っ pequeno sem consoante seguinte: mantido; a leitura depende do contexto."
+                        : "っ pequeno (sokuon): faz uma breve pausa antes da consoante seguinte. Aqui acrescenta “" + doubled + "” antes de “" + nextRomaji + "”. Exemplo: っしゃ → ssha, como em irasshaimase. Não se lê tsu.",
+                    doubled.isEmpty() ? "Small tsu without a following consonant: preserved."
+                        : "Small tsu (sokuon) adds a short closure before the next consonant. Here it adds “" + doubled + "”. It is not pronounced tsu."));
+                previousKana = "";
                 i = nextIndex;
                 continue;
             }
 
             if ("ー".equals(current)) {
-                String vowel = finalVowel(output);
+                String vowel = previousKana.isEmpty() ? "" : finalVowel(output);
                 String displayedVowel = vowel;
                 if (selectedStyle == RomanizationStyle.MACRON && replaceFinalVowelWithMacron(output)) {
                     displayedVowel = macronFor(vowel);
                 } else {
-                    output.append(vowel);
+                    output.append(vowel.isEmpty() ? current : vowel);
                 }
                 tokens.add(makeToken(current, displayedVowel, "Prolonga a vogal anterior", "Lengthens the previous vowel"));
-                previousRomaji = vowel;
+                previousKana = "";
                 i += currentLength;
                 continue;
             }
 
             if (isIterationMark(current)) {
                 boolean voiced = "ゞ".equals(current) || "ヾ".equals(current);
-                String repeated = voiced ? voice(previousRomaji) : previousRomaji;
+                String repeatedKana = repeatKana(previousKana, voiced);
+                String repeated = repeatedKana.isEmpty() ? current : KanaData.readingFor(repeatedKana);
+                if (repeated == null) repeated = current;
                 output.append(repeated);
                 tokens.add(makeToken(current, repeated,
                     voiced ? "Repete o kana anterior com voz" : "Repete o kana anterior",
                     voiced ? "Repeats the previous kana with voicing" : "Repeats the previous kana"));
-                previousRomaji = repeated;
+                previousKana = repeatedKana;
                 i += currentLength;
                 continue;
             }
@@ -227,7 +246,8 @@ public final class KanaTransliterator {
             }
 
             String unit = pair != null ? pair : current;
-            String romaji = pair != null ? KanaData.comboReading(pair) : KanaData.readingFor(current);
+            String romaji = pair != null ? KanaData.comboReading(pair)
+                : isKana(current) ? KanaData.readingFor(current) : null;
             if (romaji == null) {
                 romaji = current;
             }
@@ -240,24 +260,32 @@ public final class KanaTransliterator {
                 }
             }
 
-            boolean macronized = selectedStyle == RomanizationStyle.MACRON
-                && ("u".equals(romaji) || "o".equals(romaji))
-                && previousRomaji.endsWith("o")
-                && replaceTrailing(output, 'o', 'ō');
-            if (!macronized) output.append(romaji);
-            tokens.add(makeToken(unit, romaji, null, null));
-            if (isKana(current) && !romaji.trim().isEmpty()) previousRomaji = romaji;
+            boolean greetingHa = greeting && i == coreStart + core.length() - 1 && "は".equals(current);
+            if (greetingHa) romaji = "wa";
+            output.append(romaji);
+            tokens.add(makeToken(unit, romaji,
+                greetingHa ? "は costuma ler-se ha. Nesta saudação lê-se wa." : null,
+                greetingHa ? "は is usually ha; in this greeting it is pronounced wa." : null));
+            previousKana = isKana(current) && !romaji.equals(current) ? unit : "";
             i += pairLength;
         }
 
-        DictionaryEntry word = DICTIONARY.get(input.trim());
-        String romaji = word != null && !word.reading.isEmpty() ? word.reading : output.toString();
-        if (selectedStyle == RomanizationStyle.MACRON && word != null && !word.reading.isEmpty()) {
-            romaji = macronizeKnownReading(romaji);
+        DictionaryEntry word = known;
+        String romaji = output.toString();
+        if (word != null && !word.reading.isEmpty()) {
+            romaji = input.substring(0, coreStart) + word.reading + input.substring(coreStart + core.length());
+            tokens.clear();
+            tokens.add(new Token(core, word.reading, "Palavra conhecida", "Known word",
+                "Leitura desta palavra no dicionário. Os kanji podem ter outras leituras noutras palavras.",
+                "Dictionary reading of this word; kanji can have other readings in other words."));
+        }
+        if (selectedStyle == RomanizationStyle.MACRON && word != null) {
+            String formatted = knownMacron(core);
+            if (formatted != null) romaji = input.substring(0, coreStart) + formatted + input.substring(coreStart + core.length());
         }
         String pt = word == null ? "" : word.translationPt;
         String en = word == null ? "" : word.translationEn;
-        return new Result(input, romaji, tokens, pt, en);
+        return new Result(source == null ? "" : source, romaji, tokens, pt, en);
     }
 
     public static String toKatakana(String source) {
@@ -348,12 +376,6 @@ public final class KanaTransliterator {
         return true;
     }
 
-    private static boolean replaceTrailing(StringBuilder output, char expected, char replacement) {
-        if (output.length() == 0 || output.charAt(output.length() - 1) != expected) return false;
-        output.setCharAt(output.length() - 1, replacement);
-        return true;
-    }
-
     private static String macronFor(String vowel) {
         if ("a".equals(vowel)) return "ā";
         if ("i".equals(vowel)) return "ī";
@@ -363,19 +385,56 @@ public final class KanaTransliterator {
         return vowel;
     }
 
-    private static String macronizeKnownReading(String reading) {
-        return reading.replace("ou", "ō").replace("oo", "ō")
-            .replace("aa", "ā").replace("ii", "ī")
-            .replace("uu", "ū").replace("ee", "ē");
+    private static String knownMacron(String word) {
+        String[][] entries = {{"がっこう", "gakkō"}, {"学校", "gakkō"}, {"すうがく", "sūgaku"},
+            {"とうきょう", "tōkyō"}, {"ありがとう", "arigatō"}, {"おはよう", "ohayō"},
+            {"さようなら", "sayōnara"}, {"きょう", "kyō"}, {"だいじょうぶ", "daijōbu"}};
+        for (String[] entry : entries) if (entry[0].equals(word)) return entry[1];
+        return null;
     }
 
-    private static String voice(String roma) {
-        if (roma == null || roma.isEmpty()) return "";
-        if (roma.startsWith("k")) return "g" + roma.substring(1);
-        if (roma.startsWith("s")) return "z" + roma.substring(1);
-        if (roma.startsWith("t")) return "d" + roma.substring(1);
-        if (roma.startsWith("h")) return "b" + roma.substring(1);
-        return roma;
+    private static String repeatKana(String previous, boolean voiced) {
+        if (previous.isEmpty()) return "";
+        String base = Normalizer.normalize(previous, Normalizer.Form.NFD).replace("\u3099", "").replace("\u309A", "");
+        String transformed = Normalizer.normalize(base + (voiced ? "\u3099" : ""), Normalizer.Form.NFC);
+        return KanaData.readingFor(transformed) == null ? "" : transformed;
+    }
+
+    public static String normalizeKana(String source) {
+        java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("[\\uFF61-\\uFF9F]+").matcher(source == null ? "" : source);
+        StringBuffer result = new StringBuffer();
+        while (matcher.find()) matcher.appendReplacement(result,
+            java.util.regex.Matcher.quoteReplacement(Normalizer.normalize(matcher.group(), Normalizer.Form.NFKC)));
+        matcher.appendTail(result);
+        return Normalizer.normalize(result, Normalizer.Form.NFC);
+    }
+
+    public static boolean containsJapanese(String value) {
+        for (int i = 0; i < value.length();) {
+            int cp = value.codePointAt(i);
+            // Explicit ranges keep detection available on Android 6 / API 23.
+            if (isHiragana(cp) || isKatakana(cp) || (cp >= 0x3400 && cp <= 0x9FFF)
+                || (cp >= 0xF900 && cp <= 0xFAFF) || (cp >= 0x20000 && cp <= 0x323AF)) return true;
+            i += Character.charCount(cp);
+        }
+        return false;
+    }
+
+    public static String searchKey(String value) {
+        String key = Normalizer.normalize(value == null ? "" : value.trim(), Normalizer.Form.NFKC).toLowerCase(Locale.ROOT);
+        key = key.replace("ō", "oo").replace("ū", "uu").replace("ā", "aa").replace("ī", "ii").replace("ē", "ee");
+        key = Normalizer.normalize(key, Normalizer.Form.NFD).replaceAll("[\\u0300-\\u036f]", "");
+        return KanaData.toHiragana(Normalizer.normalize(key, Normalizer.Form.NFC)).replace("ou", "oo");
+    }
+
+    public static List<DictionaryEntry> searchDictionary(String query) {
+        List<DictionaryEntry> matches = new ArrayList<>();
+        String key = searchKey(query);
+        for (DictionaryEntry entry : DICTIONARY_ENTRIES) {
+            String reading = entry.reading.isEmpty() ? transliterate(entry.word).romaji : entry.reading;
+            if (searchKey(entry.word + " " + reading + " " + entry.translationPt + " " + entry.translationEn).contains(key)) matches.add(entry);
+        }
+        return matches;
     }
 
     private static boolean isSmallTsu(String s) { return "っ".equals(s) || "ッ".equals(s); }

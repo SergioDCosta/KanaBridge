@@ -15,6 +15,7 @@ public final class KanaData {
     public static final String SMALL = "Kana pequenos";
     public static final String MODERN = "Katakana moderno";
     public static final String AINU = "Extensões Ainu";
+    public static final String REFERENCE = "Sinais e kana históricos";
 
     private static final List<KanaEntry> ENTRIES = new ArrayList<>(160);
     private static final Map<String, List<KanaEntry>> BY_CATEGORY = new HashMap<>();
@@ -95,7 +96,7 @@ public final class KanaData {
         addPairs(SMALL, "Vogais pequenas", "ぁ:ァ:a ぃ:ィ:i ぅ:ゥ:u ぇ:ェ:e ぉ:ォ:o");
         addPairs(SMALL, "Y/W pequenos", "ゃ:ャ:ya ゅ:ュ:yu ょ:ョ:yo ゎ:ヮ:wa");
         addEntry(new KanaEntry("っ", "ッ", "", "Consoante dupla", SMALL, "", "", "Sokuon",
-            "Duplica normalmente a consoante seguinte, como em かった → katta.",
+            "Prepara a consoante seguinte com uma breve pausa. っしゃ → ssha em いらっしゃいませ → irasshaimase; った → tta em かった → katta. Não se lê tsu.",
             "Usually doubles the following consonant, as in かった → katta."));
 
         addPairs(MODERN, "V", "ゔ:ヴ:vu");
@@ -124,6 +125,14 @@ public final class KanaData {
         putSingle("・", "·"); putSingle("。", "."); putSingle("、", ",");
         putSingle("「", "“"); putSingle("」", "”"); putSingle("『", "“"); putSingle("』", "”");
         putSingle("！", "!"); putSingle("？", "?"); putSingle("　", " ");
+
+        addPairs(REFERENCE, "Kana históricos", "ゐ:ヰ:wi ゑ:ヱ:we ゕ:ヵ:ka ゖ:ヶ:ke");
+        addEntry(new KanaEntry("", "ー", "", "Vogal longa", REFERENCE, "", "", "Chōonpu",
+            "Prolonga a vogal anterior: コーヒー → koohii / kōhī.", "Lengthens the preceding vowel."));
+        addEntry(new KanaEntry("ゝ", "ヽ", "", "Repetição", REFERENCE, "", "", "Iteração",
+            "Repete o kana anterior sem dakuten.", "Repeats the previous kana without dakuten."));
+        addEntry(new KanaEntry("ゞ", "ヾ", "", "Repetição sonora", REFERENCE, "", "", "Iteração sonora",
+            "Repete o kana anterior com dakuten: しゞ → shiji.", "Repeats the preceding kana with dakuten."));
 
         for (KanaEntry entry : ENTRIES) {
             List<KanaEntry> category = BY_CATEGORY.get(entry.category);
@@ -200,7 +209,7 @@ public final class KanaData {
     }
 
     private static String convertScript(String source, boolean katakana) {
-        String input = Normalizer.normalize(source == null ? "" : source, Normalizer.Form.NFKC);
+        String input = KanaTransliterator.normalizeKana(source);
         StringBuilder output = new StringBuilder(input.length());
         for (int i = 0; i < input.length();) {
             int cp = input.codePointAt(i);
