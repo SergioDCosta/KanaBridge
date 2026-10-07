@@ -157,9 +157,10 @@ public final class KanaData {
     public static List<KanaEntry> search(String query) {
         String normalized = Normalizer.normalize(query == null ? "" : query.trim(), Normalizer.Form.NFKC);
         if (normalized.isEmpty()) return Collections.emptyList();
+        RomajiConverter.Result converted = RomajiConverter.convert(normalized);
         List<KanaEntry> result = new ArrayList<>();
         for (KanaEntry entry : ENTRIES) {
-            if (entry.matches(normalized)) result.add(entry);
+            if (entry.matches(normalized) || (!converted.partial && entry.matches(converted.hiragana))) result.add(entry);
         }
         return result;
     }
