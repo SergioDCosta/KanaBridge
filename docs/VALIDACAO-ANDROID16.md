@@ -1,5 +1,7 @@
 # Validação da KanaBridge 3
 
+> Relatório histórico da versão 3. Para o estado da versão 4, consultar README e SIMPLIFICACAO.md; as verificações de aprendizagem abaixo já não se aplicam à interface atual.
+
 Dispositivo de destino indicado pelo utilizador: Xiaomi 14T Pro, Android 16, HyperOS 3.
 
 ## Executado

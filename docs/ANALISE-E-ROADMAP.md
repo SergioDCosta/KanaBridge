@@ -1,5 +1,7 @@
 # KanaBridge — análise e proposta de evolução
 
+> Documento histórico da versão 2. A implementação atual é descrita no README e em SIMPLIFICACAO.md; as propostas educativas abaixo foram substituídas pela versão 4.
+
 Data: 8 de setembro de 2026. Versão analisada: commit `f84356da52345e8451e99ae61184c7605603d474` (2.0).
 
 ## Recomendação principal
