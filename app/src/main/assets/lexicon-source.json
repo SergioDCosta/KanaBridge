@@ -1,0 +1,10 @@
+{
+  "source": "https://www.edrdg.org/pub/Nihongo/JMdict_e.gz",
+  "generated": "2026-10-07T16:02:44.440899+00:00",
+  "entries": 218869,
+  "rows": 325004,
+  "sha256": "a84c95984295173c4a6dff2d37c16697aa7b42b469146bb0a55578d940076c5f",
+  "attribution": "JMdict © James William Breen and the Electronic Dictionary Research and Development Group",
+  "licence": "CC BY-SA 4.0",
+  "modifications": "SQLite extraction; reading normalization; sense restrictions; priority ranking"
+}
