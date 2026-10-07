@@ -1,4 +1,5 @@
-param([string]$Serial = 'emulator-5556', [string]$ScreenshotFolder = 'android16')
+param([string]$Serial = 'emulator-5556', [string]$ScreenshotFolder = 'android16', [switch]$CompileOnly,
+    [ValidateSet('portrait', 'landscape')][string]$Orientation = 'portrait')
 $ErrorActionPreference = 'Stop'
 if ($Serial -notmatch '^emulator-\d+$') { throw 'This test suite is restricted to emulators.' }
 $projectPath = $PSScriptRoot
@@ -28,9 +29,10 @@ try {
         Tool (Join-Path $toolPath 'apksigner.bat') @('sign', '--ks', 'tools/kanabridge-release.jks', '--ks-key-alias', 'kanabridge',
             '--ks-pass', 'env:KANABRIDGE_TEST_PASSWORD', '--key-pass', 'env:KANABRIDGE_TEST_PASSWORD', '--out', "$testRoot/tests.apk", "$testRoot/aligned.apk")
     } finally { Remove-Item Env:\KANABRIDGE_TEST_PASSWORD -ErrorAction SilentlyContinue }
+    if ($CompileOnly) { Write-Output 'APK de testes compilado; execução não realizada.'; return }
     Tool $adbPath @('-s', $Serial, 'install', '-r', 'dist/KanaBridge.apk')
     Tool $adbPath @('-s', $Serial, 'install', '-r', "$testRoot/tests.apk")
-    $output = & $adbPath -s $Serial shell am instrument -w com.kanabridge.tests/com.kanabridge.tests.AndroidSmokeTest
+    $output = & $adbPath -s $Serial shell am instrument -w -e orientation $Orientation com.kanabridge.tests/com.kanabridge.tests.AndroidSmokeTest
     $output | Write-Output
     if ($LASTEXITCODE -ne 0 -or ($output -join "`n") -notmatch 'OK: \d+ Android UI assertions') { throw 'Android instrumentation failed.' }
     $destination = Join-Path 'build/screenshots' $ScreenshotFolder
