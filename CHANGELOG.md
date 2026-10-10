@@ -12,6 +12,6 @@
 - Verificados dicionário e palavras guardadas após arranque a frio com Wi-Fi/dados desligados.
 - APK 5.0.0 (versionCode 5), assinado e disponibilizado na release GitHub.
 - Aceitação centrada no Xiaomi Android 16. Emulador, TalkBack e TTS dispensados pelo utilizador; matriz ampla e validação de paginação/composição de kanji e textos longos permanecem limitações de validação.
-- Telefone indisponível no fecho: instalação do APK final pendente; testes físicos anteriores documentados nos relatórios.
+- Telefone indisponível no fecho: instalação do APK final pendente; testes físicos anteriores documentados nos relatórios da tag v5.0.0.
 
-Estado detalhado: docs/KANABRIDGE-V5-ROADMAP.md e relatórios V5 em docs/.
+Registos detalhados de desenvolvimento preservados na tag v5.0.0 (pasta docs).
