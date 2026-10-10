@@ -1,5 +1,7 @@
 # KanaBridge 4
 
+> **V5 em desenvolvimento:** a branch `feature/v5-ui-ux` contém correções visuais, design partilhado e melhorias do Converter. A versão do APK continua 4.0.0 até à validação de lançamento. Estado e limites em [KANABRIDGE-V5-ROADMAP.md](docs/KANABRIDGE-V5-ROADMAP.md); alterações em [CHANGELOG.md](CHANGELOG.md). As validações históricas da v4 abaixo não equivalem à execução da instrumentação das alterações v5.
+
 Conversor e consulta de japonês para Android, com dois ecrãs principais: **Converter** e **Kana**. Sem Descobrir, lições, exercícios, pontuações ou revisão agendada. Android 6 / API 23 até Android 16 / API 36; interface em português.
 
 ## Estado atual — 7 de outubro de 2026
@@ -74,6 +76,7 @@ JDK 17/21, plataforma API 36 e Build Tools 36.0.0. O SDK é procurado em `ANDROI
 
 ```powershell
 .\run-tests.ps1
+python tests/ui_contrast_test.py
 .\build-apk.ps1
 .\build-apk.ps1 -Preview
 .\run-android-tests.ps1 -CompileOnly
