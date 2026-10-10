@@ -46,6 +46,13 @@ public final class MainActivity extends Activity {
     private int outputMode;
     private int navigationLeft, navigationRight, navigationBottom;
     private Button[] outputButtons;
+    private TextView converterTitle, converterDescription;
+    private EditText converterInput;
+    private View converterTools;
+    private boolean keyboardVisible;
+    private LinearLayout simpleResult;
+    private TextView resultTitle, resultText, partialNotice;
+    private Button resultSpeak;
     private final Map<Integer, String> composition = new HashMap<>();
     private final Handler handler = new Handler(Looper.getMainLooper());
     private Runnable pending;
@@ -77,7 +84,7 @@ public final class MainActivity extends Activity {
         else getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
             | (dark ? 0 : View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR));
         buildShell(); render();
-        if (state != null) scroll.post(() -> scroll.scrollTo(0, state.getInt("scroll")));
+
     }
     private void buildShell() {
         shell = ui.column(); shell.setBackgroundColor(ui.background);
@@ -124,10 +131,23 @@ public final class MainActivity extends Activity {
         }
     }
     private void applyInsets(WindowInsets insets) {
+        boolean visible = insets.isVisible(WindowInsets.Type.ime());
+        if (visible != keyboardVisible) { keyboardVisible = visible; fitConverterToKeyboard(); }
         android.graphics.Insets bars = insets.getInsets(WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout());
         android.graphics.Insets nav = insets.getInsets(WindowInsets.Type.navigationBars());
         navigationLeft = nav.left; navigationRight = nav.right; navigationBottom = nav.bottom; shell.invalidate();
         shell.setPadding(bars.left, bars.top, bars.right, Math.max(bars.bottom, insets.getInsets(WindowInsets.Type.ime()).bottom));
+    }
+    private void fitConverterToKeyboard() {
+        if (converterInput == null) return;
+        converterTitle.setVisibility(keyboardVisible ? View.GONE : View.VISIBLE);
+        converterDescription.setVisibility(keyboardVisible ? View.GONE : View.VISIBLE);
+        converterInput.setMinLines(keyboardVisible ? 1 : 2);
+        for (View view : new View[]{converterInput, converterTools, results}) {
+            LinearLayout.LayoutParams params = (LinearLayout.LayoutParams)view.getLayoutParams();
+            params.topMargin = ui.dp(keyboardVisible ? Ui.SPACE_SMALL : Ui.SPACE);
+            view.setLayoutParams(params);
+        }
     }
     private void revealCursor() {
         View focused = getCurrentFocus(); if (!(focused instanceof EditText)) return;
@@ -145,9 +165,13 @@ public final class MainActivity extends Activity {
     private void back() { go("converter"); }
     @Override public void onBackPressed() { if (!section.equals("converter")) back(); else super.onBackPressed(); }
     private void render() {
+        converterInput = null; simpleResult = null;
+        page.setPadding(ui.dp(16), ui.dp(Ui.SPACE), ui.dp(16), ui.dp(Ui.SPACE_LARGE));
         generation++; if (pending != null) handler.removeCallbacks(pending); page.removeAllViews();
-        LinearLayout bar = ui.row(); bar.addView(ui.text("あ  KanaBridge", 20, ui.accent, true), new LinearLayout.LayoutParams(0, -2, 1));
-        bar.addView(ui.button("Menu", false, this::menu), new LinearLayout.LayoutParams(-2, -2)); page.addView(bar, ui.wrap());
+        if (!compactKanaHeader()) {
+            LinearLayout bar = ui.row(); bar.addView(ui.text("あ  KanaBridge", 20, ui.accent, true), new LinearLayout.LayoutParams(0, -2, 1));
+            bar.addView(ui.button("Menu", false, this::menu), new LinearLayout.LayoutParams(-2, -2)); page.addView(bar, ui.wrap());
+        }
         if (!section.equals("converter") && !section.equals("kana")) ui.add(page, ui.button("← Converter", false, () -> go("converter")));
         switch (section) {
             case "kana": kana(); break;
@@ -173,13 +197,16 @@ public final class MainActivity extends Activity {
         new AlertDialog.Builder(this).setTitle("Consulta e opções").setItems(labels, (d,w) -> go(routes[w])).setNegativeButton("Fechar", null).show();
     }
     private void title(String value) { ui.add(page, ui.heading(value)); }
-    private TextView label(String value) { return ui.text(value, 15, ui.muted, false); }
+    private TextView label(String value) { return ui.text(value, Ui.CAPTION_SIZE, ui.muted, false); }
     private void weighted(LinearLayout row, View view) {
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, -2, 1); lp.setMargins(ui.dp(2), ui.dp(2), ui.dp(2), ui.dp(2)); row.addView(view, lp);
     }
     private EditText field(String text, String hint, int id, boolean multi) {
         EditText field = new EditText(this); field.setId(id); field.setTextColor(ui.ink); field.setHintTextColor(ui.muted); field.setTextSize(20);
-        field.setPadding(ui.dp(14), ui.dp(12), ui.dp(14), ui.dp(12)); field.setBackground(ui.shape(ui.surface, ui.line, 14));
+        field.setPadding(ui.dp(Ui.SPACE_LARGE), ui.dp(12), ui.dp(Ui.SPACE_LARGE), ui.dp(12));
+        field.setBackground(ui.controlBackground(ui.surface, ui.line, false));
+        field.setMinimumHeight(ui.dp(Ui.CONTROL_HEIGHT));
+        if (android.os.Build.VERSION.SDK_INT >= 29 && field.getTextCursorDrawable() != null) field.getTextCursorDrawable().setTint(ui.accent);
         field.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS | (multi ? android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE : 0));
         field.setImeOptions(android.view.inputmethod.EditorInfo.IME_FLAG_NO_EXTRACT_UI | (multi ? android.view.inputmethod.EditorInfo.IME_ACTION_NONE : android.view.inputmethod.EditorInfo.IME_ACTION_DONE));
         field.setGravity(Gravity.TOP | Gravity.START); field.setSingleLine(!multi); field.setMinLines(multi ? 2 : 1); field.setMaxLines(multi ? 5 : 1);
@@ -195,8 +222,9 @@ public final class MainActivity extends Activity {
     }
     private void later(Runnable action) { if (pending != null) handler.removeCallbacks(pending); pending = action; handler.postDelayed(action, 160); }
     private void converter() {
-        title("Converter"); ui.add(page, label("Escreve rōmaji ou cola japonês. Copia o resultado que precisas."));
-        EditText input = field(draft, "Rōmaji ou japonês", 201, true); ui.add(page, input);
+        converterTitle = ui.heading("Converter"); ui.add(page, converterTitle);
+        converterDescription = label("Escreve rōmaji ou cola japonês. Copia o resultado que precisas."); ui.add(page, converterDescription);
+        EditText input = field(draft, "Rōmaji ou japonês", 201, true); converterInput = input; ui.add(page, input);
         LinearLayout tools = ui.row(); weighted(tools, ui.button("Colar", false, () -> {
             ClipboardManager clipboard = (ClipboardManager)getSystemService(CLIPBOARD_SERVICE);
             if (clipboard.hasPrimaryClip() && clipboard.getPrimaryClip().getItemCount() > 0) {
@@ -209,12 +237,14 @@ public final class MainActivity extends Activity {
             for (int col = 0; col < 2; col++) {
                 final int mode = row * 2 + col;
                 Button button = ui.button(modes[mode], mode == outputMode, () -> {
+                    if (outputMode == mode) return;
                     outputMode = mode; for (int i = 0; i < 4; i++) ui.paint(outputButtons[i], i == mode); updateResults();
                 }); button.setId(220 + mode); ui.paint(button, mode == outputMode); outputButtons[mode] = button; weighted(choices, button);
             }
             page.addView(choices, ui.space(4));
         }
-        results = ui.column(); ui.add(page, results); updateResults();
+        converterTools = tools;
+        results = ui.column(); ui.add(page, results); updateResults(); fitConverterToKeyboard();
         watch(input, value -> {
             // Android restores EditText after onCreate; an identical value must not clear lexical choices.
             if (value.equals(draft)) return;
@@ -224,27 +254,30 @@ public final class MainActivity extends Activity {
     }
     private void output(LinearLayout parent, String name, String value, boolean speak) {
         LinearLayout card = ui.card(); card.addView(label(name), ui.wrap());
-        TextView text = ui.text(value, 24, ui.ink, false); text.setTextIsSelectable(true); card.addView(text, ui.space(6));
+        TextView text = ui.text(value, Ui.JAPANESE_SIZE, ui.ink, false); text.setTextIsSelectable(true); card.addView(text, ui.space(Ui.SPACE));
         LinearLayout actions = ui.row(); weighted(actions, ui.button("Copiar", false, () -> copy(value)));
         if (speak) weighted(actions, ui.button("Ouvir", false, () -> speech.speak(value, false)));
-        card.addView(actions, ui.space(6)); ui.add(parent, card);
+        card.addView(actions, ui.space(Ui.SPACE)); ui.add(parent, card);
     }
     private void updateResults() {
-        final int request = ++generation; results.removeAllViews();
+        final int request = ++generation;
         if (draft.trim().isEmpty()) {
+            if (simpleResult == null && results.getTag() == Boolean.TRUE) return;
+            simpleResult = null; results.removeAllViews(); results.setTag(Boolean.TRUE);
             ui.add(results, label("Ex.: irasshaimase → いらっしゃいませ\ngakkou → がっこう · nihongo → にほんご → 日本語"));
             ui.add(results, ui.button("Como escrever sons especiais", false, this::spellingHelp)); return;
         }
         RomajiConverter.Result converted = RomajiConverter.convert(draft);
         String hira = chosenReading.isEmpty() ? converted.hiragana : chosenReading;
         KanaTransliterator.Result reading = KanaTransliterator.transliterate(hira, macrons ? KanaTransliterator.RomanizationStyle.MACRON : KanaTransliterator.RomanizationStyle.SIMPLE);
-        if (outputMode == 0) output(results, "Hiragana", hira, true);
-        if (outputMode == 1) output(results, "Katakana", KanaData.toKatakana(hira), true);
-        if (outputMode == 3) output(results, "Rōmaji", reading.romaji, false);
-        if (converted.partial || reading.partial || hasKanji(hira)) ui.add(results, label("Conversão parcial: texto sem leitura reconhecida foi mantido. Para um kanji, abre Kanji e escolhe uma leitura. Frases com kanji não têm leitura automática completa."));
+        boolean partial = converted.partial || reading.partial || hasKanji(hira);
         if (outputMode != 2) {
-            ui.add(results, ui.button("Como escrever sons especiais", false, this::spellingHelp)); return;
+            updateSimpleResult(outputMode == 0 ? "Hiragana" : outputMode == 1 ? "Katakana" : "Rōmaji",
+                outputMode == 0 ? hira : outputMode == 1 ? KanaData.toKatakana(hira) : reading.romaji, outputMode != 3, partial);
+            return;
         }
+        simpleResult = null; results.setTag(null); results.removeAllViews();
+        if (partial) ui.add(results, label(partialMessage()));
         if (!selectedKanji.isEmpty()) output(results, "Kanji escolhido", selectedKanji, true);
         String[] parts = converted.hiragana.trim().split("\\s+");
         if (parts.length > 1) {
@@ -263,6 +296,29 @@ public final class MainActivity extends Activity {
         }
         ui.add(results, ui.button("Como escrever sons especiais", false, this::spellingHelp));
     }
+    private String partialMessage() {
+        return "Conversão parcial: o texto sem leitura reconhecida foi mantido. Para um kanji, abre Kanji e escolhe uma leitura. Frases com kanji não têm leitura automática completa.";
+    }
+    private void updateSimpleResult(String name, String value, boolean speak, boolean partial) {
+        if (simpleResult == null) {
+            results.removeAllViews(); results.setTag(null);
+            simpleResult = ui.card(); resultTitle = label(name); simpleResult.addView(resultTitle, ui.wrap());
+            resultText = ui.text(value, Ui.JAPANESE_SIZE, ui.ink, false); resultText.setId(205);
+            resultText.setTextIsSelectable(true); simpleResult.addView(resultText, ui.space(Ui.SPACE));
+            LinearLayout actions = ui.row();
+            weighted(actions, ui.button("Copiar", false, () -> copy(resultText.getText().toString())));
+            resultSpeak = ui.button("Ouvir", false, () -> speech.speak(resultText.getText().toString(), false)); weighted(actions, resultSpeak);
+            simpleResult.addView(actions, ui.space(Ui.SPACE)); ui.add(results, simpleResult);
+            partialNotice = label(partialMessage());
+            partialNotice.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE); ui.add(results, partialNotice);
+            ui.add(results, ui.button("Como escrever sons especiais", false, this::spellingHelp));
+        }
+        resultTitle.setText(name + (partial ? " · Conversão parcial" : ""));
+        // Keep the selectable view and its selection when a conversion has the same output.
+        if (!value.contentEquals(resultText.getText())) resultText.setText(value);
+        resultSpeak.setVisibility(speak ? View.VISIBLE : View.GONE);
+        partialNotice.setVisibility(partial ? View.VISIBLE : View.GONE);
+    }
     private interface Picked { void pick(OfflineLexicon.Word word); }
     private boolean hasKanji(String value) {
         for (int i = 0; i < value.length();) {
@@ -276,11 +332,14 @@ public final class MainActivity extends Activity {
         lexicon.search(value, prefix, limit, (words, error) -> {
             if (request != generation || isFinishing() || isDestroyed()) return;
             into.removeAllViews();
-            if (error != null) { ui.add(into, label(error)); ui.add(into, ui.button("Tentar novamente", false, () -> loadCandidates(into, value, prefix, limit, request, picked))); return; }
+            if (error != null) {
+                TextView notice = label(error); notice.setTextColor(ui.error);
+                notice.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE); ui.add(into, notice); ui.add(into, ui.button("Tentar novamente", false, () -> loadCandidates(into, value, prefix, limit, request, picked))); return; }
             ui.add(into, label(words.isEmpty() ? "Sem palavras correspondentes. Confirma a grafia e as vogais longas; nem todas as palavras usam kanji." : "Grafias e leituras · significados em inglês\nMantém premido para ver os detalhes completos."));
             for (OfflineLexicon.Word word : words) {
                 Button button = ui.button(word.word + "  ·  " + word.reading + "\n" + word.meaning, false, () -> picked.pick(word));
                 button.setMaxLines(4); button.setEllipsize(android.text.TextUtils.TruncateAt.END);
+                button.setContentDescription(word.word + " · " + word.reading + ". " + word.meaning + ". Mantém premido para ver detalhes completos.");
                 button.setOnLongClickListener(v -> { wordDetail(word); return true; });
                 button.setGravity(Gravity.START | Gravity.CENTER_VERTICAL); ui.add(into, button);
             }
@@ -308,9 +367,16 @@ public final class MainActivity extends Activity {
         }); categories.setId(212);
         boolean wide = getResources().getConfiguration().screenWidthDp >= 600 && getResources().getConfiguration().fontScale <= 1.3f;
         if (wide) weighted(scripts, categories);
+        if (compactKanaHeader()) weighted(scripts, ui.button("Menu", false, this::menu));
         ui.add(page, scripts); if (!wide) ui.add(page, categories);
-        EditText search = field(query, "Procurar som ou kana: shi, が, kya…", 202, false); ui.add(page, search);
+        EditText search = field(query, "Som ou kana", 202, false);
+        search.setContentDescription("Procurar som ou kana: shi, が, kya"); ui.add(page, search);
         table = ui.column(); table.setId(213); page.addView(table, ui.space(8)); renderTable(); watch(search, value -> { query = value; later(this::renderTable); });
+    }
+    private boolean compactKanaHeader() {
+        Configuration config = getResources().getConfiguration();
+        return section.equals("kana") && config.orientation == Configuration.ORIENTATION_LANDSCAPE
+            && config.screenWidthDp >= 600 && config.fontScale <= 1.3f;
     }
     private void kanaRefresh() { int y = scroll.getScrollY(); render(); scroll.post(() -> scroll.scrollTo(0, y)); }
     private String categoryLabel(String key) {
@@ -361,7 +427,7 @@ public final class MainActivity extends Activity {
 
     private void dictionary() {
         title("Dicionário offline"); ui.add(page, label("Procura uma palavra em rōmaji, kana ou kanji. Significados do JMdict em inglês; consulta portuguesa na Referência."));
-        EditText input = field(dictionaryQuery, "Palavra: hashi, にほんご, 日本語…", 203, false); ui.add(page, input); LinearLayout list = ui.column(); ui.add(page, list);
+        EditText input = field(dictionaryQuery, "Pesquisar palavra", 203, false); input.setContentDescription("Pesquisar palavra em rōmaji, kana ou kanji: hashi, にほんご, 日本語"); ui.add(page, input); LinearLayout list = ui.column(); ui.add(page, list);
         Runnable refresh = () -> {
             int request = ++generation;
             if (dictionaryQuery.trim().isEmpty()) { list.removeAllViews(); ui.add(list, label("Escreve uma palavra para ver grafias, leituras e significados.")); }
@@ -379,7 +445,11 @@ public final class MainActivity extends Activity {
         ui.add(body, ui.button("Usar no conversor", true, () -> { draft = word.reading; selectedKanji = word.word; chosenReading = word.reading; composition.clear(); dialog.dismiss(); go("converter"); })); dialog.show();
     }
     private void saved() {
-        title("Guardados"); List<String> words = savedWords.all(); if (words.isEmpty()) ui.add(page, label("Guarda palavras nas opções do dicionário para voltar a consultá-las aqui."));
+        title("Guardados"); List<String> words = savedWords.all();
+        if (words.isEmpty()) {
+            ui.add(page, label("Ainda não tens palavras guardadas. Abre uma palavra no dicionário e toca em Guardar."));
+            ui.add(page, ui.button("Abrir dicionário", false, () -> go("dictionary")));
+        } else ui.add(page, label(words.size() + (words.size() == 1 ? " palavra guardada" : " palavras guardadas")));
         for (String word : words) ui.add(page, ui.button(word, false, () -> { dictionaryQuery = word; go("dictionary"); }));
     }
     private void reference() {
@@ -388,11 +458,12 @@ public final class MainActivity extends Activity {
             String[] categories = {"Frases", "Verbos", "Termos", "Expressões", "Tudo"};
             new AlertDialog.Builder(this).setTitle("Consultar").setItems(categories, (d,w) -> { referenceCategory = categories[w]; go("reference"); }).setNegativeButton("Fechar", null).show();
         }));
-        EditText input = field(referenceQuery, "Procurar em português, rōmaji ou japonês", 204, false); ui.add(page, input); LinearLayout list = ui.column(); ui.add(page, list);
+        EditText input = field(referenceQuery, "Pesquisar", 204, false);
+        input.setContentDescription("Procurar em português, rōmaji ou japonês"); ui.add(page, input); LinearLayout list = ui.column(); ui.add(page, list);
         watch(input, value -> { referenceQuery = value; later(() -> referenceList(list, 30)); }); referenceList(list, 30);
     }
     private void referenceList(LinearLayout list, int limit) {
-        list.removeAllViews(); List<JapaneseReference.Entry> entries = JapaneseReference.search(referenceCategory, referenceQuery); ui.add(list, label(entries.size() + " resultados · " + referenceCategory));
+        list.removeAllViews(); List<JapaneseReference.Entry> entries = JapaneseReference.search(referenceCategory, referenceQuery); ui.add(list, label((entries.size() == 0 ? "Sem resultados. Experimenta outra palavra ou categoria." : entries.size() + " resultados · " + referenceCategory)));
         for (int i = 0; i < Math.min(entries.size(), limit); i++) {
             JapaneseReference.Entry entry = entries.get(i);
             Button button = ui.button(entry.meaning + "\n" + entry.japanese + " · " + entry.romaji(), false, () -> {
@@ -407,7 +478,9 @@ public final class MainActivity extends Activity {
     }
     private void settings() {
         title("Definições");
-        ui.add(page, ui.button("Aspeto: " + prefs.getString("theme", "system"), false, () -> {
+        String theme = prefs.getString("theme", "system");
+        String themeName = "dark".equals(theme) ? "Escuro" : "light".equals(theme) ? "Claro" : "Sistema";
+        ui.add(page, ui.button("Aspeto: " + themeName, false, () -> {
             String[] values = {"system", "light", "dark"}; new AlertDialog.Builder(this).setTitle("Aspeto").setItems(new String[]{"Seguir o sistema", "Claro", "Escuro"}, (d,w) -> { prefs.edit().putString("theme", values[w]).apply(); recreate(); }).show();
         }));
         ui.add(page, ui.button("Rōmaji: " + (macrons ? "com mácrones (ō, ū)" : "vogais por extenso (ou, uu)"), false, () -> { macrons = !macrons; prefs.edit().putBoolean("macrons", macrons).apply(); render(); }));
@@ -433,10 +506,26 @@ public final class MainActivity extends Activity {
     private void message(String title, String text) { new AlertDialog.Builder(this).setTitle(title).setMessage(text).setPositiveButton("Fechar", null).show(); }
     private void copy(String value) { ((ClipboardManager)getSystemService(CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("KanaBridge", value)); if (android.os.Build.VERSION.SDK_INT < 33) android.widget.Toast.makeText(this, "Copiado", android.widget.Toast.LENGTH_SHORT).show(); }
     @Override protected void onSaveInstanceState(Bundle state) {
+        if (converterInput != null) {
+            state.putBoolean("inputFocused", converterInput.hasFocus());
+            state.putInt("inputStart", converterInput.getSelectionStart()); state.putInt("inputEnd", converterInput.getSelectionEnd());
+            state.putInt("inputScroll", converterInput.getScrollY());
+        }
         super.onSaveInstanceState(state); state.putString("section", section); state.putString("draft", draft); state.putString("query", query); state.putString("category", category); state.putBoolean("katakana", katakana);
         state.putString("referenceCategory", referenceCategory); state.putString("referenceQuery", referenceQuery); state.putString("dictionaryQuery", dictionaryQuery); state.putString("chosenReading", chosenReading); state.putString("selectedKanji", selectedKanji); state.putInt("scroll", scroll.getScrollY()); state.putInt("outputMode", outputMode);
         ArrayList<String> choices = new ArrayList<>(); int count = RomajiConverter.convert(draft).hiragana.trim().split("\\s+").length;
         for (int i = 0; i < count; i++) choices.add(composition.containsKey(i) ? composition.get(i) : ""); state.putStringArrayList("composition", choices);
+    }
+    @Override protected void onRestoreInstanceState(Bundle state) {
+        super.onRestoreInstanceState(state);
+        if (converterInput != null && state.containsKey("inputStart")) {
+            int length = converterInput.length();
+            converterInput.setSelection(Math.max(0, Math.min(length, state.getInt("inputStart"))), Math.max(0, Math.min(length, state.getInt("inputEnd"))));
+            if (state.getBoolean("inputFocused")) converterInput.requestFocus();
+            EditText restoredInput = converterInput;
+            restoredInput.post(() -> restoredInput.scrollTo(0, state.getInt("inputScroll")));
+        }
+        scroll.post(() -> scroll.scrollTo(0, state.getInt("scroll")));
     }
     @Override protected void onStop() { prefs.edit().putString("draft", draft).putString("section", section).apply(); speech.stop(); super.onStop(); }
     @Override protected void onDestroy() { if (pending != null) handler.removeCallbacks(pending); speech.close(); lexicon.close(); super.onDestroy(); }

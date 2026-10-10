@@ -36,6 +36,7 @@ public final class AndroidSmokeTest extends Instrumentation {
             while (activity.getResources().getConfiguration().orientation != expectedOrientation && SystemClock.uptimeMillis() < orientationDeadline) idle();
             idle(); check(activity.getResources().getConfiguration().orientation == expectedOrientation, "requested test orientation");
             check(text().contains("Converter") && activity.findViewById(201) != null, "converter is home");
+            runOnMainSync(() -> check(activity.findViewById(220).isSelected(), "output choice exposes selected state"));
             check(!text().contains("Descobrir") && !text().contains("Praticar"), "removed learning navigation");
             input(201, "irasshaimase"); check(text().contains("いらっしゃいませ"), "reverse sokuon");
             byId(221); check(text().contains("イラッシャイマセ"), "katakana output");
@@ -47,6 +48,24 @@ public final class AndroidSmokeTest extends Instrumentation {
             input(201, "日本語"); byId(222); await("日本語  ·"); click("日本語  ·"); byId(223);
             check(text().contains("nihongo"), "lexical kanji reading");
             input(201, "gakkou"); byId(220); check(text().contains("がっこう"), "double consonant");
+            View stableResult = activity.findViewById(205);
+            runOnMainSync(() -> {
+                EditText field = activity.findViewById(201); field.requestFocus();
+            });
+            input(201, "gakkou "); check(activity.findViewById(205) == stableResult, "typing reuses result view");
+            runOnMainSync(() -> check(activity.findViewById(201).hasFocus(), "conversion retains input focus"));
+            byId(220); check(activity.findViewById(205) == stableResult, "selected mode does not rebuild result");
+            input(201, "gakkou"); click("Copiar");
+            runOnMainSync(() -> {
+                android.content.ClipboardManager clipboard = (android.content.ClipboardManager)activity.getSystemService(Activity.CLIPBOARD_SERVICE);
+                check(clipboard.hasPrimaryClip() && "がっこう".contentEquals(clipboard.getPrimaryClip().getItemAt(0).getText()), "copy uses current result");
+                EditText field = activity.findViewById(201); field.requestFocus(); field.setSelection(1, 4);
+            });
+            recreate();
+            runOnMainSync(() -> {
+                EditText field = activity.findViewById(201);
+                check(field.getSelectionStart() == 1 && field.getSelectionEnd() == 4, "input selection survives recreation");
+            });
             input(201, "kan'i"); check(text().contains("かんい"), "nasal separator");
             input(201, "ga pa kya"); check(text().contains("が ぱ きゃ"), "dakuten handakuten combination");
             input(201, "q"); check(text().contains("Conversão parcial"), "unsupported input disclosed");
@@ -62,11 +81,38 @@ public final class AndroidSmokeTest extends Instrumentation {
                 check(table.getTop() - search.getBottom() <= 12 * density, "no empty gap above table");
                 Button cell = findButton(activity.getWindow().getDecorView(), "し\nshi");
                 check(cell != null && cell.getHeight() >= 48 * density, "accessible kana touch target");
+                if (landscape && activity.getResources().getConfiguration().screenWidthDp >= 600 && activity.getResources().getConfiguration().fontScale <= 1.3f) {
+                    Button first = findButton(activity.getWindow().getDecorView(), "あ\na");
+                    android.graphics.Rect visible = new android.graphics.Rect();
+                    check(first != null && first.getGlobalVisibleRect(visible) && visible.height() == first.getHeight(), "first kana row visible in landscape");
+                }
             });
             screenshot("02-kana"); byId(211); check(text().contains("シ\nshi"), "direct script toggle");
             input(202, "shi"); check(text().contains("シ\nshi"), "kana search");
             recreate(); check(value(202).equals("shi"), "table query survives recreation");
-            byId(110); input(201, "a\ni\nu\ne\no\nka\nki\nku\nke\nko\nsa\nshi\nsu\nse\nso");
+            byId(110);
+            if (!landscape && activity.getResources().getConfiguration().fontScale <= 1.3f) {
+                input(201, "irasshaimase"); byId(220);
+                runOnMainSync(() -> {
+                    EditText field = activity.findViewById(201); field.requestFocus(); field.setSelection(field.length());
+                    ((android.view.inputmethod.InputMethodManager)activity.getSystemService(Activity.INPUT_METHOD_SERVICE)).showSoftInput(field, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT);
+                });
+                long shortDeadline = SystemClock.uptimeMillis() + 10000;
+                while (!keyboardVisible() && SystemClock.uptimeMillis() < shortDeadline) idle();
+                check(keyboardVisible(), "short converter keyboard opens"); idle();
+                check(!text().contains("Escreve rōmaji ou cola japonês"), "intro yields space to keyboard");
+                runOnMainSync(() -> {
+                    for (String action : new String[]{"Copiar", "Ouvir"}) {
+                        Button button = findButton(activity.getWindow().getDecorView(), action);
+                        android.graphics.Rect visible = new android.graphics.Rect();
+                        check(button != null && button.getGlobalVisibleRect(visible) && visible.height() == button.getHeight(), action + " fully visible above keyboard for short input");
+                    }
+                });
+                screenshot("03-short-keyboard");
+                getUiAutomation().performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK); idle();
+                check(text().contains("Escreve rōmaji ou cola japonês"), "intro returns after keyboard closes");
+            }
+            input(201, "a\ni\nu\ne\no\nka\nki\nku\nke\nko\nsa\nshi\nsu\nse\nso");
             runOnMainSync(() -> {
                 EditText field = activity.findViewById(201); field.requestFocus(); field.setSelection(field.length());
                 ((android.view.inputmethod.InputMethodManager)activity.getSystemService(Activity.INPUT_METHOD_SERVICE)).showSoftInput(field, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT);
@@ -88,6 +134,11 @@ public final class AndroidSmokeTest extends Instrumentation {
             input(204, "porque"); check(text().contains("Porque gosto"), "Portuguese reference search"); screenshot("04-reference");
             click("Menu"); dialogItem("Dicionário offline"); input(203, "hashi"); await("bridge");
             check(text().contains("chopsticks"), "ambiguous kanji meanings"); screenshot("05-dictionary");
+            dialogItem("橋  ·");
+            AccessibilityNodeInfo detail = getUiAutomation().getRootInActiveWindow();
+            java.util.List<AccessibilityNodeInfo> primaryActions = detail.findAccessibilityNodeInfosByText("Usar no conversor");
+            check(!primaryActions.isEmpty() && !primaryActions.get(0).isSelected(), "primary action is not a selected choice");
+            dialogItem("Fechar");
             getTargetContext().getSharedPreferences("kanabridge", 0).edit().putString("theme", "dark").commit();
             recreate(); byId(111); input(202, ""); screenshot("06-dark");
             result.putString("stream", "OK: " + assertions + " Android UI assertions; screenshots in app external files.\n"); finish(Activity.RESULT_OK, result);
