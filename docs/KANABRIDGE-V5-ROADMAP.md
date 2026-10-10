@@ -2,10 +2,10 @@
 
 > **Objetivo:** melhorar a apresentação, a consistência e a utilização da KanaBridge sem alterar o seu propósito: uma aplicação Android **simples, leve, rápida e offline**.
 >
-> **Estado:** em curso · **Base:** KanaBridge 4.0.0 · **Tipo de atualização:** refinamento e correção, não reescrita.
+> **Estado:** v5 encerrada no âmbito de aceitação do utilizador · **Base:** KanaBridge 4.0.0 · **Tipo de atualização:** refinamento e correção, não reescrita.
 
 
-> **Atualização de progresso — 10/10/2026:** `[x]` = ponto concluído no âmbito indicado; `[ ]` = pendente ou parcial. As notas **Parcial** identificam trabalho já realizado sem dar o requisito inteiro como concluído. Validação física feita no Xiaomi Android 16; instrumentação apenas compilada, sem execução em emulador. As secções 2–8 não estão concluídas globalmente.
+> **Atualização de progresso — 10/10/2026:** `[x]` = ponto concluído no âmbito indicado; `[ ]` = pendente ou parcial. As notas **Parcial** identificam trabalho já realizado sem dar o requisito inteiro como concluído. Validação física feita no Xiaomi Android 16; instrumentação apenas compilada, sem execução em emulador. A matriz original não foi executada integralmente; consultar o fecho abaixo para o âmbito aceite.
 
 | Secção | Estado atual |
 | --- | --- |
@@ -274,3 +274,18 @@
 - Repositório: https://github.com/SergioDCosta/KanaBridge
 - Documentação base: `README.md`, `docs/SIMPLIFICACAO.md` e scripts de testes/compilação na raiz.
 - Nota: o plano parte do estado documentado da versão 4 em outubro de 2026. Confirmar cada hipótese face ao código e aos resultados dos testes antes de a implementar.
+
+## Fecho da v5 — 10/10/2026
+
+Versão 5.0.0, versionCode 5. O utilizador dispensou emulador, TalkBack e TTS dos critérios de aceitação. Estes testes não são apresentados como executados; as caixas históricas preservam o estado real de cada ponto do plano original.
+
+- [x] Metadados utilizados no build e apresentação da versão atualizados.
+- [x] APK principal e Kanateste compilados e assinaturas verificadas.
+- [x] 797 testes Java, integridade SQLite e 28 verificações de contraste aprovados no fecho.
+- [x] APK principal com 19 731 191 bytes, igual ao APK v4 de referência; sem uses-permission.
+- [x] README e changelog atualizados com downloads e limites.
+- [ ] Instalação do APK final: telemóvel não disponível no ADB durante o fecho. Os testes físicos anteriores permanecem válidos para as alterações de interface; o último ajuste foi de versão.
+
+Limites de validação: paginação/composição de kanji, textos longos, outros dispositivos/versões Android, arranque quente e fluidez não receberam validação completa. Não foram identificadas regressões nos fluxos efetivamente testados; não se afirma cobertura integral do roadmap original. O arranque frio de 167 ms foi medido num build anterior, não no APK final.
+
+Distribuição: release GitHub `v5.0.0`, com `KanaBridge.apk` e `Kanateste.apk`, a partir da branch `feature/v5-ui-ux`.

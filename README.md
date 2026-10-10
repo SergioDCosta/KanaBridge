@@ -1,12 +1,12 @@
-# KanaBridge 4
+# KanaBridge 5
 
-> **V5 em desenvolvimento:** a branch `feature/v5-ui-ux` contém correções visuais, design partilhado e melhorias do Converter. A versão do APK continua 4.0.0 até à validação de lançamento. Estado e limites em [KANABRIDGE-V5-ROADMAP.md](docs/KANABRIDGE-V5-ROADMAP.md); alterações em [CHANGELOG.md](CHANGELOG.md). As validações históricas da v4 abaixo não equivalem à execução da instrumentação das alterações v5.
+> **V5 publicada:** refinamento visual, componentes partilhados e melhorias do estado do Converter. Validada no Xiaomi Android 16; emulador, TalkBack e TTS dispensados pelo utilizador. A instrumentação v5 foi compilada, sem execução. Os limites detalhados constam do [roadmap](docs/KANABRIDGE-V5-ROADMAP.md).
 
 Conversor e consulta de japonês para Android, com dois ecrãs principais: **Converter** e **Kana**. Sem Descobrir, lições, exercícios, pontuações ou revisão agendada. Android 6 / API 23 até Android 16 / API 36; interface em português.
 
-## Estado atual — 7 de outubro de 2026
+## Estado atual — 10 de outubro de 2026
 
-A versão **4.0.0** está implementada no código de `main`. A app centra-se na conversão de rōmaji e na consulta de kana e palavras; a referência de japonês é opcional, no Menu.
+A versão **5.0.0** está disponível na release `v5.0.0`, a partir da branch `feature/v5-ui-ux`. A app centra-se na conversão de rōmaji e na consulta de kana e palavras; a referência de japonês é opcional, no Menu.
 
 | Área | Estado |
 | --- | --- |
@@ -63,7 +63,7 @@ Ouvir usa síntese de voz japonesa instalada no dispositivo que declare funciona
 
 Compilação para Android 16 / API 36. Os APKs locais ficam em `dist`, ignorados pelo Git:
 
-- `KanaBridge-preview.apk`: **KanaBridge 4**, pacote `com.kanabridge.preview`; pode coexistir com a versão original.
+- `KanaBridge-preview.apk`: **KanaBridge 5**, pacote `com.kanabridge.preview`; pode coexistir com a versão original.
 - `KanaBridge.apk`: pacote original `com.kanabridge`; atualizar uma instalação existente requer a mesma chave de assinatura.
 
 Abre o APK no telemóvel e permite a instalação pela aplicação que usaste para abrir o ficheiro, se solicitado pelo Android. A chave disponível é uma chave de desenvolvimento local; se a instalação anterior tiver outra assinatura, usa a variante preview para preservar os dados antigos. A chave local é reutilizada e está ignorada pelo Git.
@@ -115,3 +115,7 @@ O instalador interno usa o digest da fonte para substituir automaticamente a bas
 - `SavedWords.java`, `JapaneseSpeech.java`, `Ui.java`: guardados, áudio e interface.
 
 Este README descreve o estado atual. [SIMPLIFICACAO.md](docs/SIMPLIFICACAO.md) detalha a implementação da versão 4. [ANALISE-E-ROADMAP.md](docs/ANALISE-E-ROADMAP.md) conserva a análise da versão 2 e [VALIDACAO-ANDROID16.md](docs/VALIDACAO-ANDROID16.md) o relatório histórico da versão 3; as propostas antigas foram substituídas pela simplificação atual.
+
+## Descarregar a app
+
+Abre [Releases](https://github.com/SergioDCosta/KanaBridge/releases/latest), expande **Assets** e descarrega `KanaBridge.apk`. No Android, abre o APK e autoriza a instalação pela aplicação usada para o abrir. `Kanateste.apk` instala uma variante independente para testes. Uma atualização exige a mesma assinatura; se uma instalação antiga tiver outra assinatura, usa a Kanateste para preservar os dados existentes.

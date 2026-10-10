@@ -93,7 +93,7 @@ if (Test-Path -LiteralPath $BuildDir) {
 New-Item -ItemType Directory -Force -Path $ClassesDir, $DexDir, $CompiledResourcesDir, $DistDir, $ToolsDir | Out-Null
 if ($Preview) {
     $PreviewManifest = Join-Path $BuildDir 'AndroidManifest.xml'
-    (Get-Content -LiteralPath $Manifest -Raw).Replace('package="com.kanabridge"', 'package="com.kanabridge.preview"').Replace('android:name=".MainActivity"', 'android:name="com.kanabridge.MainActivity"').Replace('android:label="KanaBridge"', 'android:label="KanaBridge 4"') | Set-Content -LiteralPath $PreviewManifest -Encoding utf8
+    (Get-Content -LiteralPath $Manifest -Raw).Replace('package="com.kanabridge"', 'package="com.kanabridge.preview"').Replace('android:name=".MainActivity"', 'android:name="com.kanabridge.MainActivity"').Replace('android:label="KanaBridge"', 'android:label="KanaBridge 5"') | Set-Content -LiteralPath $PreviewManifest -Encoding utf8
     $Manifest = $PreviewManifest
 }
 
@@ -131,7 +131,7 @@ if ($CompiledResources.Count -eq 0) {
 $LinkArguments = @(
     "link", "-I", $AndroidJar, "--manifest", $Manifest,
     "--min-sdk-version", $MinSdk, "--target-sdk-version", "36",
-    "--version-code", "4", "--version-name", "4.0.0",
+    "--version-code", "5", "--version-name", "5.0.0",
     "-A", (Join-Path $ProjectRoot "app\src\main\assets"),
     "-o", $UnsignedApk
 )

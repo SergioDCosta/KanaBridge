@@ -485,7 +485,7 @@ public final class MainActivity extends Activity {
         }));
         ui.add(page, ui.button("Rōmaji: " + (macrons ? "com mácrones (ō, ū)" : "vogais por extenso (ou, uu)"), false, () -> { macrons = !macrons; prefs.edit().putBoolean("macrons", macrons).apply(); render(); }));
         ui.add(page, ui.button("Testar voz japonesa", false, () -> speech.speak("こんにちは", false)));
-        ui.add(page, label("O tamanho do texto acompanha as definições de acessibilidade do Android. A tabela adapta-se a texto grande.\n\nKanaBridge 4 · Android 6–16 · sem conta e sem Internet. Voz japonesa requer um pacote offline instalado no telemóvel."));
+        ui.add(page, label("O tamanho do texto acompanha as definições de acessibilidade do Android. A tabela adapta-se a texto grande.\n\nKanaBridge 5 · Android 6–16 · sem conta e sem Internet. Voz japonesa requer um pacote offline instalado no telemóvel."));
     }
     private void sources() {
         title("Fontes e licenças");

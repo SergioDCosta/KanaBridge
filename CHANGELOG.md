@@ -1,6 +1,6 @@
 # Changelog
 
-## Em desenvolvimento — v5
+## 5.0.0 — 2026-10-10
 
 - Corrigida a ocupação do Converter com teclado e a primeira linha Kana em paisagem larga.
 - Corrigidas indicações de pesquisa cortadas e nomes internos dos temas expostos na interface.
@@ -10,6 +10,8 @@
 - Melhorados os estados vazios de Guardados/Referência e descrições dos resultados do dicionário.
 - Acrescentados testes de contraste e regressões Android. Java/SQLite aprovados; instrumentação v5 compilada, execução pendente.
 - Verificados dicionário e palavras guardadas após arranque a frio com Wi-Fi/dados desligados.
-- Versão do APK permanece 4.0.0. Lançamento v5, tag e matriz completa ainda pendentes.
+- APK 5.0.0 (versionCode 5), assinado e disponibilizado na release GitHub.
+- Aceitação centrada no Xiaomi Android 16. Emulador, TalkBack e TTS dispensados pelo utilizador; matriz ampla e validação de paginação/composição de kanji e textos longos permanecem limitações de validação.
+- Telefone indisponível no fecho: instalação do APK final pendente; testes físicos anteriores documentados nos relatórios.
 
 Estado detalhado: docs/KANABRIDGE-V5-ROADMAP.md e relatórios V5 em docs/.
