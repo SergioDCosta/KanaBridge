@@ -9,7 +9,8 @@ public final class RomajiConverterTest {
         check(!result.partial, source + " should be complete");
         check(KanaData.toKatakana(expected).equals(result.katakana), source + " katakana");
     }
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
+        try (java.io.InputStream reference = new java.io.FileInputStream("app/src/main/assets/reference.xml")) { JapaneseReference.load(reference); }
         word("irasshaimase", "いらっしゃいませ"); word("IRASSHAIMASE", "いらっしゃいませ");
         word("gakkou", "がっこう"); word("gakkō", "がっこう"); word("matcha", "まっちゃ"); word("maccha", "まっちゃ");
         word("issho", "いっしょ"); word("kitte", "きって"); word("zasshi", "ざっし"); word("tsuppari", "つっぱり");
@@ -45,8 +46,8 @@ public final class RomajiConverterTest {
             check(!entry.meaning.isEmpty() && !entry.reading.isEmpty() && !entry.japanese.isEmpty(), "complete reference entry");
             check(!KanaTransliterator.transliterate(entry.reading).partial, "readable kana: " + entry.reading);
         }
-        check(JapaneseReference.all().size() == 308, "existing reference preserved plus first grammar batch");
-        check(JapaneseReference.search("Adjetivos", "").size() == 4, "adjective topic");
+        check(JapaneseReference.all().size() == 570, "existing reference preserved plus expanded editorial batches");
+        check(JapaneseReference.search("Adjetivos", "").size() >= 6, "adjective topic");
         check(JapaneseReference.search("Partículas", "").size() >= 2, "particle comparisons");
         check(JapaneseReference.search("Números e tempo", "horas").get(0).reading.contains("よじ"), "irregular hour reading");
         check(JapaneseReference.search("Verbos e formas", "Grupo ichidan").get(0).detail.contains("帰る"), "verb group exception documented");

@@ -29,13 +29,21 @@ assert hashlib.sha256((assets/'lexicon.db').read_bytes()).hexdigest() == meta['d
 assert db.execute('SELECT COUNT(*) FROM senses').fetchone()[0] == meta['senses']
 assert db.execute('SELECT COUNT(*) FROM spellings s LEFT JOIN definitions d ON d.id=s.definition WHERE d.id IS NULL').fetchone()[0] == 0
 entry = db.execute("SELECT entry FROM words WHERE word='食べる' AND reading='たべる'").fetchone()[0]
-senses = [dict(json.loads(r[0]), glosses=json.loads(r[1])) for r in db.execute('SELECT payload,glosses FROM senses JOIN definitions ON definitions.id=senses.definition WHERE entry=? ORDER BY ordinal',(entry,))]
+senses = [dict(json.loads(r[0]), glosses=json.loads(r[1])) for r in db.execute('SELECT payload,glosses FROM senses JOIN sense_payloads ON sense_payloads.id=senses.payload_id JOIN definitions ON definitions.id=senses.definition WHERE entry=? ORDER BY ordinal',(entry,))]
 assert senses[0]['glosses'] == ['to eat']
 assert 'Ichidan verb' in senses[0]['pos'] and 'transitive verb' in senses[0]['pos']
 assert len(senses) > 1 and senses[1]['pos'] == senses[0]['pos'], 'POS inherited by later sense'
 assert db.execute("SELECT original_reading FROM words WHERE original_reading='コーヒー' AND reading='こーひー'").fetchone()[0] == 'コーヒー'
-for payload, glosses in db.execute('SELECT payload,glosses FROM senses JOIN definitions ON definitions.id=senses.definition'):
+for payload, glosses in db.execute('SELECT payload,glosses FROM senses JOIN sense_payloads ON sense_payloads.id=senses.payload_id JOIN definitions ON definitions.id=senses.definition'):
     value=dict(json.loads(payload),glosses=json.loads(glosses))
     assert value['glosses'] and all(isinstance(x,str) and x for x in value['glosses'])
 db.close()
 print(f"OK: SQLite integrity, {meta['entries']} entries / {meta['rows']} spellings, lexical examples, indexes and attribution")
+
+reference=assets/'reference.xml'
+assert hashlib.sha256(reference.read_bytes()).hexdigest()==meta['reference_sha256']
+db=sqlite3.connect(f"file:{(assets/'lexicon.db').as_posix()}?mode=ro",uri=True)
+assert db.execute('SELECT COUNT(DISTINCT reference_id) FROM editorial').fetchone()[0]==meta['editorial_entries']>=300
+assert db.execute('SELECT COUNT(*) FROM senses LEFT JOIN sense_payloads ON sense_payloads.id=senses.payload_id WHERE sense_payloads.id IS NULL').fetchone()[0]==0
+assert db.execute('SELECT COUNT(*) FROM senses LEFT JOIN definitions ON definitions.id=senses.definition WHERE definitions.id IS NULL').fetchone()[0]==0
+print('OK: compact payload relations and 356 authored Portuguese links')

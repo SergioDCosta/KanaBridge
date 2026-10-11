@@ -1,4 +1,5 @@
-param([switch]$Preview)
+param([switch]$Preview, [switch]$Kanateste)
+if ($Preview -and $Kanateste) { throw "Escolhe apenas Preview ou Kanateste." }
 $ErrorActionPreference = "Stop"
 
 # Android 16 / API 36. An explicit SDK root takes precedence over the local SDK.
@@ -23,7 +24,7 @@ $Apksigner = Join-Path $BuildTools "apksigner.bat"
 $JavaSourceDir = Join-Path $ProjectRoot "app\src\main\java"
 $ResourceDir = Join-Path $ProjectRoot "app\src\main\res"
 $Manifest = Join-Path $ProjectRoot "app\src\main\AndroidManifest.xml"
-$BuildSubdir = if ($Preview) { 'build\apk-preview' } else { 'build\apk' }
+$BuildSubdir = if ($Kanateste) { 'build\apk-kanateste' } elseif ($Preview) { 'build\apk-preview' } else { 'build\apk' }
 $BuildDir = Join-Path $ProjectRoot $BuildSubdir
 $ClassesDir = Join-Path $BuildDir "classes"
 $DexDir = Join-Path $BuildDir "dex"
@@ -31,7 +32,7 @@ $CompiledResourcesDir = Join-Path $BuildDir "compiled-res"
 $UnsignedApk = Join-Path $BuildDir "KanaBridge-unsigned.apk"
 $AlignedApk = Join-Path $BuildDir "KanaBridge-aligned.apk"
 $DistDir = Join-Path $ProjectRoot "dist"
-$FinalApk = Join-Path $DistDir $(if ($Preview) { 'KanaBridge-preview.apk' } else { 'KanaBridge.apk' })
+$FinalApk = Join-Path $DistDir $(if ($Kanateste) { 'Kanateste.apk' } elseif ($Preview) { 'KanaBridge-preview.apk' } else { 'KanaBridge.apk' })
 $SignatureSidecar = "$FinalApk.idsig"
 $ToolsDir = Join-Path $ProjectRoot "tools"
 $Keystore = Join-Path $ToolsDir "kanabridge-release.jks"
@@ -91,9 +92,11 @@ if (Test-Path -LiteralPath $BuildDir) {
     Remove-Item -LiteralPath $BuildDir -Recurse -Force
 }
 New-Item -ItemType Directory -Force -Path $ClassesDir, $DexDir, $CompiledResourcesDir, $DistDir, $ToolsDir | Out-Null
-if ($Preview) {
+if ($Preview -or $Kanateste) {
+    $PreviewPackage = if ($Kanateste) { "com.kanabridge.kanateste" } else { "com.kanabridge.preview" }
+    $PreviewLabel = if ($Kanateste) { "Kanateste" } else { "KanaBridge 5.1" }
     $PreviewManifest = Join-Path $BuildDir 'AndroidManifest.xml'
-    (Get-Content -LiteralPath $Manifest -Raw).Replace('package="com.kanabridge"', 'package="com.kanabridge.preview"').Replace('android:name=".MainActivity"', 'android:name="com.kanabridge.MainActivity"').Replace('android:label="KanaBridge"', 'android:label="KanaBridge 5"') | Set-Content -LiteralPath $PreviewManifest -Encoding utf8
+    (Get-Content -LiteralPath $Manifest -Raw).Replace('package="com.kanabridge"', ('package="' + $PreviewPackage + '"')).Replace('android:name=".MainActivity"', 'android:name="com.kanabridge.MainActivity"').Replace('android:label="KanaBridge"', ('android:label="' + $PreviewLabel + '"')) | Set-Content -LiteralPath $PreviewManifest -Encoding utf8
     $Manifest = $PreviewManifest
 }
 
@@ -131,7 +134,7 @@ if ($CompiledResources.Count -eq 0) {
 $LinkArguments = @(
     "link", "-I", $AndroidJar, "--manifest", $Manifest,
     "--min-sdk-version", $MinSdk, "--target-sdk-version", "36",
-    "--version-code", "5", "--version-name", "5.0.0",
+    "--version-code", "6", "--version-name", "5.1.0",
     "-A", (Join-Path $ProjectRoot "app\src\main\assets"),
     "-o", $UnsignedApk
 )
@@ -142,6 +145,8 @@ foreach ($Resource in $CompiledResources) {
 Write-Host "A criar APK..."
 Invoke-Tool "aapt2 link" $Aapt2 $LinkArguments
 Invoke-Tool "jar" $Jar @("--update", "--file", $UnsignedApk, "-C", $DexDir, "classes.dex")
+
+Invoke-Tool "Compressão do APK" (Require-Command "python") @((Join-Path $ToolsDir "package-apk.py"), $UnsignedApk)
 
 Write-Host "A alinhar APK..."
 Invoke-Tool "zipalign" $Zipalign @("-f", "4", $UnsignedApk, $AlignedApk)

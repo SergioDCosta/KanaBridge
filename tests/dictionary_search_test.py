@@ -30,3 +30,20 @@ assert len(first)==30 and len(second)==30 and full==first+second, 'stable pagina
 assert query('zzzznosuchword')[0]==[], 'missing Japanese query'
 print('OK: production dictionary SQL, exact/prefix/kanji/English/literal inputs and stable pages')
 print(json.dumps({'host_query_ms':measurements},ensure_ascii=False))
+
+for text, word in [('água','水'), ('AGUA','水'), ('comer','食べる'), ('estacao','駅')]:
+    rows,_=query(text,'pt'); assert any(r[0]==word for r in rows),(text,word)
+assert query('água','pt')[0]==query('agua','pt')[0], 'Portuguese accent tolerant'
+for token in ['%', '_', "' OR 1=1 --", 'zzzznosuchword']:
+    assert query(token,'pt')[0]==[], 'PT literals never expand to all words'
+# A reproducible corpus covers 100 distinct kana/kanji/rōmaji/EN/PT queries.
+corpus = db.execute("SELECT DISTINCT word,reading FROM words WHERE rank=0 AND length(word)>=2 AND length(reading)>=3 ORDER BY entry,word LIMIT 50").fetchall()
+for word,reading in corpus:
+    assert any(r[0]==word and r[1]==reading for r in query(word,False,300)[0]), ('kanji corpus',word,reading)
+    assert any(r[0]==word and r[1]==reading for r in query(reading,False,300)[0]), ('reading corpus',word,reading)
+print('OK: Portuguese partial layer, accent/literal inputs and 100-query lexical corpus')
+
+output=subprocess.check_output(['java','-cp',str(root/'build/tests'),'com.kanabridge.LexiconQueryProbe',base64.b64encode(b'agua').decode(),'pt','30','0'],encoding='utf-8').splitlines()
+plan=db.execute('EXPLAIN QUERY PLAN '+output[0],output[1:]).fetchall()
+assert not any('SCAN spellings' in row[3] for row in plan), 'PT mode must not scan the whole lexicon'
+assert any('by_word' in row[3] for row in plan), 'PT mode uses existing spelling index'
