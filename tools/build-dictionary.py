@@ -8,6 +8,7 @@ import gzip
 import hashlib
 import json
 import sqlite3
+import unicodedata
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 from pathlib import Path
@@ -28,7 +29,15 @@ def intern_definition(glosses):
         definitions[key] = len(definitions) + 1
         db.execute('INSERT INTO definitions VALUES (?,?,?)', (definitions[key], '; '.join(glosses), json.dumps(glosses, ensure_ascii=False, separators=(',', ':'))))
     return definitions[key]
-db.execute('CREATE TABLE senses (entry INTEGER NOT NULL, ordinal INTEGER NOT NULL, definition INTEGER NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(entry,ordinal))')
+db.execute('CREATE TABLE sense_payloads (id INTEGER PRIMARY KEY, payload TEXT NOT NULL)')
+payloads = {}
+def intern_payload(payload):
+    key = json.dumps(payload, ensure_ascii=False, separators=(',', ':'))
+    if key not in payloads:
+        payloads[key] = len(payloads) + 1
+        db.execute('INSERT INTO sense_payloads VALUES (?,?)', (payloads[key], key))
+    return payloads[key]
+db.execute('CREATE TABLE senses (entry INTEGER NOT NULL, ordinal INTEGER NOT NULL, definition INTEGER NOT NULL, payload_id INTEGER NOT NULL, PRIMARY KEY(entry,ordinal)) WITHOUT ROWID')
 entries = rows = sense_count = 0
 with gzip.open(source, 'rb') as stream:
     for event, entry in ET.iterparse(stream, events=('end',)):
@@ -48,7 +57,7 @@ with gzip.open(source, 'rb') as stream:
                 payload = {tag: [x.text for x in sense.findall(tag) if x.text] for tag in ('stagk','stagr','field','misc','dial','s_inf','xref','ant')}
                 payload = {key: value for key, value in payload.items() if value}
                 payload.update(pos=inherited_pos)
-                db.execute('INSERT INTO senses VALUES (?,?,?,?)', (ident, ordinal, intern_definition(glosses), json.dumps(payload, ensure_ascii=False, separators=(',', ':'))))
+                db.execute('INSERT INTO senses VALUES (?,?,?,?)', (ident, ordinal, intern_definition(glosses), intern_payload(payload)))
                 sense_count += 1
         for reading in entry.findall('r_ele'):
             kana = reading.findtext('reb')
@@ -80,6 +89,17 @@ db.execute('CREATE INDEX by_reading ON spellings(reading,rank,word)')
 db.execute('CREATE INDEX by_word ON spellings(word,rank)')
 db.execute('CREATE INDEX by_definition ON spellings(definition)')
 db.execute('CREATE VIEW words AS SELECT reading,word,meaning,rank,entry,original_reading FROM spellings JOIN definitions ON definitions.id=spellings.definition')
+# A small authored Portuguese layer links exact spellings/readings, not guessed senses.
+db.execute('CREATE TABLE editorial (entry INTEGER NOT NULL, word TEXT NOT NULL, reading TEXT NOT NULL, meaning TEXT NOT NULL, reference_id TEXT NOT NULL, search_key TEXT NOT NULL, PRIMARY KEY(entry,word,reading)) WITHOUT ROWID')
+reference_path = root / 'app/src/main/assets/reference.xml'
+for reference in ET.parse(reference_path).getroot().findall('entry'):
+    if reference.findtext('category') not in ('Verbos', 'Termos'):
+        continue
+    word, reading = reference.findtext('japanese'), reference.findtext('reading')
+    key = ''.join(chr(ord(c) - 96) if '\u30a1' <= c <= '\u30f6' else c for c in reading)
+    for ident, in db.execute('SELECT DISTINCT entry FROM words WHERE word=? AND reading=?', (word, key)).fetchall():
+        db.execute('INSERT OR IGNORE INTO editorial VALUES (?,?,?,?,?,?)', (ident, word, key, reference.findtext('meaning'), reference.get('id'), ''.join(c for c in unicodedata.normalize('NFD', reference.findtext('meaning').lower()) if not '\u0300' <= c <= '\u036f')))
+editorial_count = db.execute('SELECT COUNT(DISTINCT reference_id) FROM editorial').fetchone()[0]
 db.execute('PRAGMA user_version=2')
 db.commit()
 db.execute('VACUUM')
@@ -89,7 +109,7 @@ assert db.execute("SELECT COUNT(*) FROM words WHERE reading='はし'").fetchone(
 db.close()
 temporary.replace(target)
 metadata = dict(source='https://www.edrdg.org/pub/Nihongo/JMdict_e.gz',
-                generated=datetime.now(timezone.utc).isoformat(), entries=entries, rows=rows, senses=sense_count, schema_version=2, importer_version=2, database_sha256=hashlib.sha256(target.read_bytes()).hexdigest(),
+                generated=datetime.now(timezone.utc).isoformat(), entries=entries, rows=rows, senses=sense_count, schema_version=2, importer_version=3, editorial_entries=editorial_count, reference_sha256=hashlib.sha256(reference_path.read_bytes()).hexdigest(), database_sha256=hashlib.sha256(target.read_bytes()).hexdigest(),
                 sha256=hashlib.sha256(source.read_bytes()).hexdigest(),
                 attribution='JMdict © James William Breen and the Electronic Dictionary Research and Development Group',
                 licence='CC BY-SA 4.0', modifications='SQLite extraction; reading normalization; sense restrictions; priority ranking; original readings; structured senses and grammatical/usage tags')
