@@ -65,6 +65,20 @@ final class OfflineLexicon {
             main.post(() -> { if (!closed) callback.done(results, failure); });
         });
     }
+    private final java.util.concurrent.atomic.AtomicInteger dictionaryRequest = new java.util.concurrent.atomic.AtomicInteger();
+    void dictionary(String query, boolean meaning, int limit, int offset, Callback callback) {
+        int ticket = dictionaryRequest.incrementAndGet();
+        worker.execute(() -> {
+            if (closed || ticket != dictionaryRequest.get()) return;
+            List<Word> results = new ArrayList<>(); String error = null;
+            try {
+                open(); LexiconQueries request = new LexiconQueries(query, meaning, limit, offset);
+                try (Cursor cursor = db.rawQuery(request.sql, request.args)) { read(cursor, results); }
+            } catch (Exception e) { error = "Não foi possível consultar o dicionário offline. Volta a tentar."; }
+            final String failure = error;
+            main.post(() -> { if (!closed && ticket == dictionaryRequest.get()) callback.done(results, failure); });
+        });
+    }
     private static void read(Cursor cursor, List<Word> into) {
         while (cursor.moveToNext()) into.add(new Word(cursor.getString(0), cursor.getString(1), cursor.getString(2)));
     }

@@ -45,7 +45,7 @@ public final class MainActivity extends Activity {
     private String detailOrigin = "dictionary";
     private int dictionaryLimit = 30, dictionaryReturnScroll = -1, detailReturnScroll;
     private int dictionarySelection;
-    private boolean dictionaryFocused;
+    private boolean dictionaryFocused, dictionaryMeaning;
     private boolean katakana, dark, macrons;
     private int generation;
     private int outputMode;
@@ -84,7 +84,7 @@ public final class MainActivity extends Activity {
             referenceCategory = state.getString("referenceCategory", "Frases"); referenceQuery = state.getString("referenceQuery", ""); dictionaryQuery = state.getString("dictionaryQuery", "");
             chosenReading = state.getString("chosenReading", ""); selectedKanji = state.getString("selectedKanji", "");
             outputMode = state.getInt("outputMode");
-            dictionaryLimit = state.getInt("dictionaryLimit", 30);
+            dictionaryLimit = state.getInt("dictionaryLimit", 30); dictionaryMeaning = state.getBoolean("dictionaryMeaning");
             if (section.equals("dictionary")) dictionaryReturnScroll = state.getInt("scroll");
             detailOrigin = state.getString("detailOrigin", "dictionary");
             detailReturnScroll = state.getInt("detailReturnScroll");
@@ -473,14 +473,23 @@ public final class MainActivity extends Activity {
     }
 
     private void dictionary() {
-        title("Dicionário offline"); ui.add(page, label("Pesquisa em rōmaji, kana ou kanji. Definições em inglês."));
+        title("Dicionário offline"); ui.add(page, label(dictionaryMeaning ? "Pesquisa nas definições em inglês. Português ainda não disponível neste modo." : "Pesquisa em rōmaji, kana ou kanji. Definições em inglês."));
+        LinearLayout modes = ui.row();
+        for (int i = 0; i < 2; i++) {
+            boolean meaning = i == 1;
+            Button mode = ui.button(meaning ? "Significado (EN)" : "Japonês / rōmaji", dictionaryMeaning == meaning, () -> {
+                if (dictionaryMeaning == meaning) return;
+                dictionaryMeaning = meaning; dictionaryLimit = 30; dictionaryReturnScroll = -1; render();
+            }); ui.paint(mode, dictionaryMeaning == meaning); weighted(modes, mode);
+        } ui.add(page, modes);
         ui.add(page, ui.button("Guardados · " + savedWords.all().size(), false, () -> go("saved")));
-        EditText input = field(dictionaryQuery, "Pesquisar palavra", 203, false); input.setContentDescription("Pesquisar palavra em rōmaji, kana ou kanji: hashi, にほんご, 日本語"); ui.add(page, input); LinearLayout list = ui.column(); ui.add(page, list);
+        EditText input = field(dictionaryQuery, dictionaryMeaning ? "Significado em inglês" : "Pesquisar palavra", 203, false); input.setContentDescription(dictionaryMeaning ? "Pesquisar significado em inglês: bridge, school" : "Pesquisar palavra em rōmaji, kana ou kanji: hashi, にほんご, 日本語"); ui.add(page, input); LinearLayout list = ui.column(); ui.add(page, list);
         Runnable refresh = () -> {
             int request = ++generation;
             if (dictionaryQuery.trim().isEmpty()) { list.removeAllViews(); ui.add(list, label("Escreve ou cola uma palavra. Experimenta uma destas pesquisas:"));
-                for (String example : new String[]{"nihongo", "hashi", "gakkou"}) ui.add(list, ui.button(example, false, () -> { input.setText(example); input.setSelection(input.length()); })); }
-            else loadCandidates(list, RomajiConverter.convert(dictionaryQuery).hiragana, true, dictionaryLimit, request, this::openDictionaryDetail);
+                for (String example : (dictionaryMeaning ? new String[]{"bridge", "school", "water"} : new String[]{"nihongo", "hashi", "gakkou"})) ui.add(list, ui.button(example, false, () -> { input.setText(example); input.setSelection(input.length()); })); }
+            else if (dictionaryMeaning && dictionaryQuery.trim().length() < 2) { list.removeAllViews(); ui.add(list, label("Escreve pelo menos duas letras do significado em inglês.")); }
+            else { list.removeAllViews(); dictionaryPage(list, dictionaryQuery, dictionaryMeaning, 0, dictionaryLimit, request); }
         };
         LinearLayout actions = ui.row();
         weighted(actions, ui.button("Colar", false, () -> {
@@ -492,6 +501,41 @@ public final class MainActivity extends Activity {
         }));
         weighted(actions, ui.button("Limpar", false, () -> input.setText(""))); page.addView(actions, page.indexOfChild(list));
         watch(input, value -> { dictionaryQuery = value; dictionaryLimit = 30; dictionaryReturnScroll = -1; generation++; later(refresh); }); refresh.run();
+    }
+    private void dictionaryPage(LinearLayout list, String query, boolean meaning, int offset, int size, int request) {
+        TextView status = label("A pesquisar offline…"); ui.add(list, status);
+        lexicon.dictionary(query, meaning, size + 1, offset, (words, error) -> {
+            if (request != generation || !section.equals("dictionary") || isFinishing() || isDestroyed()) return;
+            list.removeView(status);
+            if (error != null) {
+                TextView failure = label(error); failure.setTextColor(ui.error); ui.add(list, failure);
+                ui.add(list, ui.button("Tentar novamente", false, () -> { list.removeAllViews(); dictionaryPage(list, query, meaning, 0, dictionaryLimit, request); })); return;
+            }
+            int count = Math.min(size, words.size());
+            if (offset == 0) ui.add(list, label(count == 0 ? "Sem resultados. Confirma a grafia ou experimenta outro modo de pesquisa." : "Resultados · toca numa palavra para ver os detalhes"));
+            String kana = KanaData.toHiragana(RomajiConverter.convert(query.trim()).hiragana);
+            for (int i = 0; i < count; i++) {
+                OfflineLexicon.Word word = words.get(i);
+                boolean exact = word.word.equals(query.trim()) || word.reading.equals(kana);
+                Button card = ui.button(word.word + "  ·  " + word.reading + "\n" + word.meaning + (!meaning && !exact ? "\nComeça por esta pesquisa" : ""), false, () -> openDictionaryDetail(word));
+                card.setGravity(Gravity.START | Gravity.CENTER_VERTICAL); card.setMaxLines(5); card.setEllipsize(android.text.TextUtils.TruncateAt.END);
+                card.setContentDescription(word.word + " · " + word.reading + ". " + word.meaning + ". Abrir detalhes."); ui.add(list, card);
+            }
+            dictionaryLimit = Math.max(30, offset + count);
+            if (words.size() > size) {
+                Button more = ui.button("Mostrar mais resultados", false, () -> {});
+                more.setOnClickListener(v -> { list.removeView(more); dictionaryPage(list, query, meaning, offset + count, 30, request); }); ui.add(list, more);
+            }
+            if (dictionaryReturnScroll >= 0) {
+                int restore = dictionaryReturnScroll; dictionaryReturnScroll = -1;
+                View input = findViewById(203);
+                if (input instanceof EditText) {
+                    EditText field = (EditText)input; field.setSelection(Math.max(0, Math.min(field.length(), dictionarySelection)));
+                    if (dictionaryFocused) field.requestFocus();
+                }
+                scroll.post(() -> scroll.scrollTo(0, restore));
+            }
+        });
     }
     private void openDictionaryDetail(OfflineLexicon.Word word) {
         detailWord = word; detailOrigin = section; detailReturnScroll = scroll.getScrollY();
@@ -529,7 +573,7 @@ public final class MainActivity extends Activity {
             ui.add(page, label("Ainda não tens palavras guardadas. Abre uma palavra no dicionário e toca em Guardar."));
             ui.add(page, ui.button("Abrir dicionário", false, () -> go("dictionary")));
         } else ui.add(page, label(words.size() + (words.size() == 1 ? " palavra guardada" : " palavras guardadas")));
-        for (String word : words) ui.add(page, ui.button(word, false, () -> { dictionaryQuery = word; go("dictionary"); }));
+        for (String word : words) ui.add(page, ui.button(word, false, () -> { dictionaryQuery = word; dictionaryMeaning = false; dictionaryLimit = 30; go("dictionary"); }));
     }
     private void reference() {
         title("Referência de japonês"); ui.add(page, label("Consulta opcional: " + JapaneseReference.all().size() + " entradas em português. Frases, partículas, verbos e termos; sem exercícios."));
@@ -601,7 +645,7 @@ public final class MainActivity extends Activity {
         }
         View dictionaryInput = findViewById(203);
         if (dictionaryInput instanceof EditText) { dictionarySelection = ((EditText)dictionaryInput).getSelectionEnd(); dictionaryFocused = dictionaryInput.hasFocus(); }
-        state.putInt("dictionaryLimit", dictionaryLimit); state.putString("detailOrigin", detailOrigin);
+        state.putBoolean("dictionaryMeaning", dictionaryMeaning); state.putInt("dictionaryLimit", dictionaryLimit); state.putString("detailOrigin", detailOrigin);
         state.putInt("detailReturnScroll", detailReturnScroll); state.putInt("dictionarySelection", dictionarySelection); state.putBoolean("dictionaryFocused", dictionaryFocused);
         if (detailWord != null) { state.putString("detailWord", detailWord.word); state.putString("detailReading", detailWord.reading); state.putString("detailMeaning", detailWord.meaning); }
         super.onSaveInstanceState(state); state.putString("section", section); state.putString("draft", draft); state.putString("query", query); state.putString("category", category); state.putBoolean("katakana", katakana);

@@ -11,7 +11,8 @@ $sources = @(
     (Join-Path $javaRoot "KanaData.java"),
     (Join-Path $javaRoot "KanaTransliterator.java"),
     (Join-Path $javaRoot "RomajiConverter.java"),
-    (Join-Path $javaRoot "JapaneseReference.java")
+    (Join-Path $javaRoot "JapaneseReference.java"),
+    (Join-Path $javaRoot "LexiconQueries.java")
 )
 $tests = @(Get-ChildItem -LiteralPath (Join-Path $projectRoot "tests") -Filter '*.java' | ForEach-Object FullName)
 

@@ -147,6 +147,11 @@ public final class AndroidSmokeTest extends Instrumentation {
             recreate(); await("bridge"); check(value(203).equals("hashi"), "dictionary query survives recreation");
             click("Limpar"); check(value(203).isEmpty() && text().contains("nihongo"), "clear reveals sample queries");
             click("nihongo"); await("日本語"); check(value(203).equals("nihongo"), "sample query searches dictionary");
+            click("Significado (EN)"); click("Limpar"); click("bridge"); await("bridge");
+            check(text().contains("橋  ·"), "English meaning query finds Japanese entry");
+            recreate(); check(text().contains("Significado em inglês"), "meaning mode survives recreation");
+            click("Japonês / rōmaji"); input(203, "hashi"); await("Começa por esta pesquisa");
+            check(text().contains("chopsticks"), "exact matches retained alongside prefixes");
             getTargetContext().getSharedPreferences("kanabridge", 0).edit().putString("theme", "dark").commit();
             recreate(); byId(111); input(202, ""); screenshot("06-dark");
             result.putString("stream", "OK: " + assertions + " Android UI assertions; screenshots in app external files.\n"); finish(Activity.RESULT_OK, result);

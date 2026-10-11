@@ -1,5 +1,13 @@
 # Changelog
 
+## Em desenvolvimento — 5.1.0
+
+- Dicionário e Referência acessíveis na navegação principal; ecrã inicial configurável.
+- Detalhe de palavra em ecrã completo, com copiar palavra/leitura, guardar e retorno à consulta.
+- Pesquisa japonesa combina correspondências exatas e prefixos de leitura/grafia, preservando a prioridade das exatas.
+- Modo explícito de pesquisa nas definições em inglês; caracteres especiais tratados como texto literal.
+- Mais resultados são acrescentados por páginas; consultas obsoletas em fila são descartadas.
+- Testes de integração executam as consultas Java reais contra a base SQLite distribuída.
 ## 5.0.0 — 2026-10-10
 
 - Corrigida a ocupação do Converter com teclado e a primeira linha Kana em paisagem larga.

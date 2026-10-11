@@ -39,6 +39,7 @@ Requer JDK 17/21, Android SDK com plataforma API 36, Build Tools 36.0.0 e Python
 ```powershell
 .\run-tests.ps1
 python tests/lexicon_test.py
+python tests/dictionary_search_test.py
 python tests/ui_contrast_test.py
 .\build-apk.ps1
 .\run-android-tests.ps1 -CompileOnly
