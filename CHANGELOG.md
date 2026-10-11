@@ -1,6 +1,6 @@
 # Changelog
 
-## Em desenvolvimento — 5.1.0
+## 5.1.0 — 2026-10-11
 
 - Dicionário e Referência acessíveis na navegação principal; ecrã inicial configurável.
 - Detalhe de palavra em ecrã completo, com copiar palavra/leitura, guardar e retorno à consulta.
@@ -17,7 +17,9 @@
 - Histórico local limitado a 30 consultas selecionadas; limpeza nas definições e ligações do detalhe à Referência.
 - Base reduzida de 96,1 para 80,3 MB através da partilha de metadados repetidos, preservando todas as palavras e sentidos; APK final cerca de 28,2 MB (antes: 31,2 MB nesta expansão).
 - Hash calculado durante a extração, sem reler toda a base; instalação serializada entre instâncias e carregamento da Referência em segundo plano com índices reutilizados.
-- Validação: 1 378 verificações Java, SQLite, consultas/paginação/corpus lexical, estrutura editorial e 28 contrastes aprovados. Probe no Xiaomi: 132 verificações aprovadas, incluindo preservação dos dados reais. Repetição da medição PT final pendente após recusa de instalação pelo Android. Interface final no Xiaomi verificada em PT/detalhe/Referência/retorno e consultas recentes, incluindo pesquisa offline após reiniciar o processo com base já extraída. APKs assinados e instrumentação de interface compilada.
+- Validação: 1 378 verificações Java, SQLite, consultas/paginação/corpus lexical, estrutura editorial e 28 contrastes aprovados. Probe no Xiaomi: 132 verificações aprovadas, incluindo preservação dos dados reais. Probe final aprovado: p95 de consulta JP 1,19 ms, EN 127,59 ms e PT 1,07 ms, com base já extraída; ferramenta temporária removida. Interface final no Xiaomi verificada em PT/detalhe/Referência/retorno e consultas recentes, incluindo pesquisa offline após reiniciar o processo com base já extraída. APKs assinados e instrumentação de interface compilada.
+
+- APK principal 5.1.0 (versionCode 6), assinado e publicado na release GitHub; variante Kanateste excluída da release.
 
 ## 5.0.0 — 2026-10-10
 

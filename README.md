@@ -1,4 +1,4 @@
-# KanaBridge 5
+# KanaBridge 5.1
 
 Aplicação Android em português para converter rōmaji e consultar kana e palavras japonesas. Simples, offline, sem contas, publicidade ou permissão de Internet.
 
@@ -8,9 +8,9 @@ Aplicação Android em português para converter rōmaji e consultar kana e pala
 
 No Android, abre o APK e permite a instalação pela aplicação que o abriu. Para atualizar uma instalação existente, a assinatura tem de ser a mesma. Compatibilidade prevista: Android 6 ou superior (API 23); compilada para Android 16 (API 36).
 
-## Desenvolvimento da 5.1
+## Novidades da 5.1
 
-Esta branch contém a implementação da 5.1; o download acima continua a disponibilizar a release estável 5.0.0 até à publicação da nova release. O dicionário inclui 218 888 entradas, 325 038 pares de grafia/leitura e 253 766 sentidos. A Referência tem 570 entradas em português: 80 estruturas, 160 verbos, 250 termos e 80 expressões.
+A release estável 5.1.0 está disponível no download acima. O dicionário inclui 218 888 entradas, 325 038 pares de grafia/leitura e 253 766 sentidos. A Referência tem 570 entradas em português: 80 estruturas, 160 verbos, 250 termos e 80 expressões.
 
 A pesquisa dispõe de modos japonês/rōmaji, significado em inglês e português parcial, com 356 fichas da Referência ligadas ao JMdict. Os sentidos completos continuam em inglês. Inclui paginação, detalhe por sentidos, ligações à Referência, favoritos com identidade e leitura próprias, filtro dos guardados e até 30 consultas recentes locais. As consultas só são registadas ao abrir um resultado e podem ser eliminadas nas definições.
 
@@ -18,13 +18,13 @@ Quando não há resultados japoneses, algumas flexões conhecidas dos verbos da 
 
 A base extraída ocupa cerca de 80,3 MB, abaixo dos 96,1 MB da primeira expansão da 5.1, preservando todas as palavras e sentidos. O APK final ocupa cerca de 28,2 MB, abaixo dos 31,2 MB desse bloco. A base vai dentro do APK comprimida e é extraída localmente na primeira consulta; não é descarregada da Internet. Consulta o [changelog](CHANGELOG.md).
 
-## Funcionalidades da release 5.0
+## Funcionalidades
 
 - **Converter:** rōmaji para Hiragana/Katakana, consulta de opções de Kanji e conversão inversa para rōmaji. Permite copiar resultados.
 - **Kana:** tabelas Hiragana/Katakana, pesquisa por som ou símbolo e detalhes dos caracteres.
-- **Dicionário offline:** JMdict com 218 869 entradas e 325 004 pares de grafia/leitura; definições em inglês.
-- **Guardados:** palavras favoritas armazenadas no telemóvel.
-- **Referência:** 290 entradas em português sobre estruturas, verbos, termos e expressões.
+- **Dicionário offline:** JMdict com 218 888 entradas e 325 038 pares de grafia/leitura; sentidos completos em inglês e pesquisa em português com cobertura parcial.
+- **Guardados:** palavras favoritas com identidade e leitura próprias, filtro e abertura direta do detalhe.
+- **Referência:** 570 entradas em português sobre estruturas, verbos, termos e expressões.
 - Temas claro, escuro e sistema; texto acompanha a escala do Android.
 - Voz japonesa quando existe um pacote de síntese offline instalado no dispositivo.
 
@@ -38,13 +38,7 @@ Rascunhos e guardados ficam no telemóvel; backup automático desativado. A app 
 
 ## Validação da 5.1
 
-Passaram 1 378 verificações Java, integridade e hashes SQLite, consultas Java reais com um corpus lexical de 100 pesquisas, estrutura das 570 fichas e 28 verificações de contraste. APK principal e Kanateste compilados e assinaturas verificadas; instrumentação de interface compilada. O probe executado no Xiaomi Android 16 passou 132 verificações do repositório e da migração, confirmando que as preferências reais ficaram iguais. Uma repetição depois da otimização final da pesquisa PT foi recusada pelo instalador do telemóvel; essa nova medição ficou pendente. Emulador, TalkBack e TTS foram dispensados pelo utilizador. No Xiaomi, a interface final confirmou pesquisa PT, sentidos, ligação à Referência e retorno, recuperação das consultas recentes e pesquisa após reiniciar a app com Wi-Fi/dados desligados. Este ensaio utilizou a base já extraída; não foi uma instalação limpa offline. Não foi validada uma matriz ampla de dispositivos.
-
-## Versão 5 e validação histórica
-
-Interface refinada, melhor utilização com teclado, componentes visuais partilhados, contraste reforçado e preservação de seleção/foco da entrada no Converter. Consulta o [changelog](CHANGELOG.md).
-
-Passaram 797 verificações Java, integridade SQLite e 28 verificações de contraste. Fluxos de interface, dicionário e guardados offline foram verificados num Xiaomi Android 16 antes do ajuste final de versão. APK final compilado e assinatura verificada; instalação desse APK ainda pendente. A instrumentação v5 foi compilada, sem execução. Emulador, TalkBack e TTS foram dispensados nesta entrega. Outros dispositivos, paginação/composição de kanji e textos longos não receberam validação completa.
+Passaram 1 378 verificações Java, integridade e hashes SQLite, consultas Java reais com um corpus lexical de 100 pesquisas, estrutura das 570 fichas e 28 verificações de contraste. APK principal e Kanateste compilados e assinaturas verificadas; instrumentação de interface compilada. O probe executado no Xiaomi Android 16 passou 132 verificações do repositório e da migração, confirmando que as preferências reais ficaram iguais. A repetição final passou as mesmas 132 verificações. Em 20 consultas por modo, p95 de 1,19 ms para japonês, 127,59 ms para inglês e 1,07 ms para português; medição do repositório com a base já extraída, sem incluir debounce ou renderização. O probe temporário foi removido. Emulador, TalkBack e TTS foram dispensados pelo utilizador. No Xiaomi, a interface final confirmou pesquisa PT, sentidos, ligação à Referência e retorno, recuperação das consultas recentes e pesquisa após reiniciar a app com Wi-Fi/dados desligados. Este ensaio utilizou a base já extraída; não foi uma instalação limpa offline. Não foi validada uma matriz ampla de dispositivos.
 
 ## Compilar e testar no Windows
 
