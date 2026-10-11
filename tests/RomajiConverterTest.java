@@ -45,6 +45,12 @@ public final class RomajiConverterTest {
             check(!entry.meaning.isEmpty() && !entry.reading.isEmpty() && !entry.japanese.isEmpty(), "complete reference entry");
             check(!KanaTransliterator.transliterate(entry.reading).partial, "readable kana: " + entry.reading);
         }
+        check(JapaneseReference.all().size() == 308, "existing reference preserved plus first grammar batch");
+        check(JapaneseReference.search("Adjetivos", "").size() == 4, "adjective topic");
+        check(JapaneseReference.search("Partículas", "").size() >= 2, "particle comparisons");
+        check(JapaneseReference.search("Números e tempo", "horas").get(0).reading.contains("よじ"), "irregular hour reading");
+        check(JapaneseReference.search("Verbos e formas", "Grupo ichidan").get(0).detail.contains("帰る"), "verb group exception documented");
+        check(JapaneseReference.search("Pedidos e situações", "Proibição").get(0).romaji().contains("totte wa"), "particle pronunciation in new prohibition example");
         System.out.println("OK: " + assertions + " reverse conversion and reference assertions");
         System.out.println("Reference: " + JapaneseReference.all().size() + " entries; " + JapaneseReference.search("Verbos", "").size() + " verbs; " + JapaneseReference.search("Termos", "").size() + " terms; " + JapaneseReference.search("Frases", "").size() + " patterns; " + JapaneseReference.search("Expressões", "").size() + " expressions");
     }

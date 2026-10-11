@@ -1,10 +1,14 @@
 {
   "source": "https://www.edrdg.org/pub/Nihongo/JMdict_e.gz",
-  "generated": "2026-10-07T16:02:44.440899+00:00",
-  "entries": 218869,
-  "rows": 325004,
-  "sha256": "a84c95984295173c4a6dff2d37c16697aa7b42b469146bb0a55578d940076c5f",
+  "generated": "2026-10-11T17:21:07.231615+00:00",
+  "entries": 218888,
+  "rows": 325038,
+  "senses": 253766,
+  "schema_version": 2,
+  "importer_version": 2,
+  "database_sha256": "f3b320344c55661eaee7b40574402ebb0b5d5231ee2362a1abfc6fd8e3c00035",
+  "sha256": "4855280c53bfd52c41194af2da37b7190a7b8c170f379d643555820dc9f5d10e",
   "attribution": "JMdict © James William Breen and the Electronic Dictionary Research and Development Group",
   "licence": "CC BY-SA 4.0",
-  "modifications": "SQLite extraction; reading normalization; sense restrictions; priority ranking"
+  "modifications": "SQLite extraction; reading normalization; sense restrictions; priority ranking; original readings; structured senses and grammatical/usage tags"
 }

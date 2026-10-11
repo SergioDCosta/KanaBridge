@@ -132,7 +132,7 @@ public final class AndroidSmokeTest extends Instrumentation {
             }); screenshot("03-keyboard");
             getUiAutomation().performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK); idle();
             click("Menu"); dialogItem("Referência de japonês (opcional)");
-            check(text().contains("290 entradas"), "large optional reference");
+            check(text().contains("308 entradas"), "large optional reference");
             input(204, "porque"); check(text().contains("Porque gosto"), "Portuguese reference search"); screenshot("04-reference");
             byId(112); input(203, "hashi"); await("bridge");
             check(text().contains("chopsticks"), "ambiguous kanji meanings"); screenshot("05-dictionary");

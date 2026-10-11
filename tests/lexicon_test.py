@@ -24,5 +24,18 @@ assert (assets / 'EDRDG-LICENCE.html').is_file() and (assets / 'CC-BY-SA-4.0.txt
 source = root / '.tooling/dictionary/JMdict_e.gz'
 if source.exists():
     assert hashlib.sha256(source.read_bytes()).hexdigest() == meta['sha256']
+assert db.execute('PRAGMA user_version').fetchone()[0] == 2
+assert hashlib.sha256((assets/'lexicon.db').read_bytes()).hexdigest() == meta['database_sha256']
+assert db.execute('SELECT COUNT(*) FROM senses').fetchone()[0] == meta['senses']
+assert db.execute('SELECT COUNT(*) FROM spellings s LEFT JOIN definitions d ON d.id=s.definition WHERE d.id IS NULL').fetchone()[0] == 0
+entry = db.execute("SELECT entry FROM words WHERE word='食べる' AND reading='たべる'").fetchone()[0]
+senses = [dict(json.loads(r[0]), glosses=json.loads(r[1])) for r in db.execute('SELECT payload,glosses FROM senses JOIN definitions ON definitions.id=senses.definition WHERE entry=? ORDER BY ordinal',(entry,))]
+assert senses[0]['glosses'] == ['to eat']
+assert 'Ichidan verb' in senses[0]['pos'] and 'transitive verb' in senses[0]['pos']
+assert len(senses) > 1 and senses[1]['pos'] == senses[0]['pos'], 'POS inherited by later sense'
+assert db.execute("SELECT original_reading FROM words WHERE original_reading='コーヒー' AND reading='こーひー'").fetchone()[0] == 'コーヒー'
+for payload, glosses in db.execute('SELECT payload,glosses FROM senses JOIN definitions ON definitions.id=senses.definition'):
+    value=dict(json.loads(payload),glosses=json.loads(glosses))
+    assert value['glosses'] and all(isinstance(x,str) and x for x in value['glosses'])
 db.close()
 print(f"OK: SQLite integrity, {meta['entries']} entries / {meta['rows']} spellings, lexical examples, indexes and attribution")

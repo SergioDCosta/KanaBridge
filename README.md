@@ -8,7 +8,11 @@ Aplicação Android em português para converter rōmaji e consultar kana e pala
 
 No Android, abre o APK e permite a instalação pela aplicação que o abriu. Para atualizar uma instalação existente, a assinatura tem de ser a mesma. Compatibilidade prevista: Android 6 ou superior (API 23); compilada para Android 16 (API 36).
 
-## Funcionalidades
+## Desenvolvimento da 5.1
+
+Esta branch prepara a versão 5.1; o download acima continua a disponibilizar a release estável 5.0.0. A nova base contém 218 888 entradas e 253 766 sentidos, separados por classe e uso; a Referência passa a 308 entradas e permite consultar temas. O APK de testes ocupa cerca de 31,2 MB e a base extraída cerca de 96,1 MB. A expansão e validação da 5.1 ainda estão em curso; consulta o [changelog](CHANGELOG.md).
+
+## Funcionalidades da release 5.0
 
 - **Converter:** rōmaji para Hiragana/Katakana, consulta de opções de Kanji e conversão inversa para rōmaji. Permite copiar resultados.
 - **Kana:** tabelas Hiragana/Katakana, pesquisa por som ou símbolo e detalhes dos caracteres.

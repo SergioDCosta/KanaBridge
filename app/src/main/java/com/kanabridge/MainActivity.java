@@ -39,7 +39,7 @@ public final class MainActivity extends Activity {
     private LinearLayout shell, page, navigation, results, table;
     private ScrollView scroll;
     private String section = "converter", draft = "", query = "", category = KanaData.GOJUON;
-    private String referenceCategory = "Frases", referenceQuery = "", dictionaryQuery = "";
+    private String referenceCategory = "Tudo", referenceQuery = "", dictionaryQuery = "";
     private String selectedKanji = "", chosenReading = "";
     private OfflineLexicon.Word detailWord;
     private String detailOrigin = "dictionary";
@@ -81,7 +81,7 @@ public final class MainActivity extends Activity {
         if (state != null) {
             section = state.getString("section", "converter"); draft = state.getString("draft", draft);
             query = state.getString("query", ""); category = state.getString("category", KanaData.GOJUON); katakana = state.getBoolean("katakana");
-            referenceCategory = state.getString("referenceCategory", "Frases"); referenceQuery = state.getString("referenceQuery", ""); dictionaryQuery = state.getString("dictionaryQuery", "");
+            referenceCategory = state.getString("referenceCategory", "Tudo"); referenceQuery = state.getString("referenceQuery", ""); dictionaryQuery = state.getString("dictionaryQuery", "");
             chosenReading = state.getString("chosenReading", ""); selectedKanji = state.getString("selectedKanji", "");
             outputMode = state.getInt("outputMode");
             dictionaryLimit = state.getInt("dictionaryLimit", 30); dictionaryMeaning = state.getBoolean("dictionaryMeaning");
@@ -90,7 +90,7 @@ public final class MainActivity extends Activity {
             detailReturnScroll = state.getInt("detailReturnScroll");
             dictionarySelection = state.getInt("dictionarySelection");
             dictionaryFocused = state.getBoolean("dictionaryFocused");
-            if (state.containsKey("detailWord")) detailWord = new OfflineLexicon.Word(state.getString("detailWord"), state.getString("detailReading"), state.getString("detailMeaning"));
+            if (state.containsKey("detailWord")) detailWord = new OfflineLexicon.Word(state.getString("detailWord"), state.getString("detailReading"), state.getString("detailMeaning"), state.getLong("detailEntry"), state.getString("detailOriginalReading", state.getString("detailReading")));
             ArrayList<String> choices = state.getStringArrayList("composition");
             if (choices != null) for (int i = 0; i < choices.size(); i++) if (!choices.get(i).isEmpty()) composition.put(i, choices.get(i));
         }
@@ -375,7 +375,7 @@ public final class MainActivity extends Activity {
                 notice.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE); ui.add(into, notice); ui.add(into, ui.button("Tentar novamente", false, () -> loadCandidates(into, value, prefix, limit, request, picked))); return; }
             ui.add(into, label(words.isEmpty() ? "Sem palavras correspondentes. Confirma a grafia e as vogais longas; nem todas as palavras usam kanji." : (section.equals("dictionary") ? "Resultados · toca numa palavra para ver os detalhes" : "Grafias e leituras · significados em inglês\nMantém premido para ver os detalhes completos.")));
             for (OfflineLexicon.Word word : words) {
-                Button button = ui.button(word.word + "  ·  " + word.reading + "\n" + word.meaning, false, () -> picked.pick(word));
+                Button button = ui.button(word.word + "  ·  " + word.originalReading + "\n" + word.meaning, false, () -> picked.pick(word));
                 button.setMaxLines(4); button.setEllipsize(android.text.TextUtils.TruncateAt.END);
                 button.setContentDescription(word.word + " · " + word.reading + ". " + word.meaning + (section.equals("dictionary") ? ". Abrir detalhes." : ". Mantém premido para ver detalhes completos."));
                 if (!section.equals("dictionary")) button.setOnLongClickListener(v -> { wordDetail(word); return true; });
@@ -517,7 +517,7 @@ public final class MainActivity extends Activity {
             for (int i = 0; i < count; i++) {
                 OfflineLexicon.Word word = words.get(i);
                 boolean exact = word.word.equals(query.trim()) || word.reading.equals(kana);
-                Button card = ui.button(word.word + "  ·  " + word.reading + "\n" + word.meaning + (!meaning && !exact ? "\nComeça por esta pesquisa" : ""), false, () -> openDictionaryDetail(word));
+                Button card = ui.button(word.word + "  ·  " + word.originalReading + "\n" + word.meaning + (!meaning && !exact ? "\nComeça por esta pesquisa" : ""), false, () -> openDictionaryDetail(word));
                 card.setGravity(Gravity.START | Gravity.CENTER_VERTICAL); card.setMaxLines(5); card.setEllipsize(android.text.TextUtils.TruncateAt.END);
                 card.setContentDescription(word.word + " · " + word.reading + ". " + word.meaning + ". Abrir detalhes."); ui.add(list, card);
             }
@@ -545,10 +545,10 @@ public final class MainActivity extends Activity {
     }
     private void dictionaryDetail() {
         title(detailWord.word);
-        TextView reading = ui.text(detailWord.reading + " · " + KanaTransliterator.transliterate(detailWord.reading).romaji, 20, ui.ink, false);
+        TextView reading = ui.text(detailWord.originalReading + " · " + KanaTransliterator.transliterate(detailWord.reading).romaji, 20, ui.ink, false);
         reading.setTextIsSelectable(true); ui.add(page, reading);
         ui.add(page, label("Definição em inglês · JMdict"));
-        TextView meaning = ui.text(detailWord.meaning, Ui.BODY_SIZE, ui.ink, false); meaning.setTextIsSelectable(true); ui.add(page, meaning);
+        LinearLayout senses = ui.column(); ui.add(page, senses); loadWordSenses(senses, detailWord, generation);
         Button save = ui.button(savedWords.contains(detailWord.word) ? "Remover dos guardados" : "Guardar palavra", false, () -> {});
         save.setOnClickListener(v -> { savedWords.toggle(detailWord.word); save.setText(savedWords.contains(detailWord.word) ? "Remover dos guardados" : "Guardar palavra"); }); ui.add(page, save);
         ui.add(page, ui.button("Copiar palavra", false, () -> copy(detailWord.word)));
@@ -557,6 +557,51 @@ public final class MainActivity extends Activity {
         ui.add(page, ui.button("Usar no conversor", true, () -> {
             draft = detailWord.reading; selectedKanji = detailWord.word; chosenReading = detailWord.reading; composition.clear(); go("converter");
         }));
+    }
+    private void loadWordSenses(LinearLayout target, OfflineLexicon.Word word, int request) {
+        target.removeAllViews(); ui.add(target, label("A carregar sentidos…"));
+        lexicon.details(word, (senses, error) -> {
+            if (request != generation || !section.equals("word") || isFinishing() || isDestroyed()) return;
+            target.removeAllViews();
+            if (error != null) {
+                TextView notice = label(error); notice.setTextColor(ui.error); ui.add(target, notice);
+                ui.add(target, ui.button("Tentar novamente", false, () -> loadWordSenses(target, word, request))); return;
+            }
+            if (senses.isEmpty()) { TextView text = ui.text(word.meaning, Ui.BODY_SIZE, ui.ink, false); text.setTextIsSelectable(true); ui.add(target, text); }
+            for (int i = 0; i < senses.size(); i++) {
+                org.json.JSONObject sense = senses.get(i); LinearLayout card = ui.card();
+                ui.add(card, ui.text("Sentido " + (i + 1), 18, ui.ink, true));
+                for (String tag : new String[]{"pos", "field", "misc", "dial"}) {
+                    String value = tag.equals("pos") ? grammarLabels(sense.optJSONArray(tag)) : jsonList(sense.optJSONArray(tag));
+                    if (!value.isEmpty()) ui.add(card, label((tag.equals("pos") ? "Classe: " : tag.equals("field") ? "Área: " : tag.equals("dial") ? "Dialeto: " : "Uso: ") + value));
+                }
+                TextView definition = ui.text(jsonList(sense.optJSONArray("glosses")), Ui.BODY_SIZE, ui.ink, false); definition.setTextIsSelectable(true); ui.add(card, definition);
+                for (String tag : new String[]{"s_inf", "xref", "ant"}) {
+                    String value = jsonList(sense.optJSONArray(tag)); if (!value.isEmpty()) ui.add(card, label((tag.equals("xref") ? "Ver também: " : tag.equals("ant") ? "Contraste: " : "Nota: ") + value));
+                }
+                ui.add(target, card);
+            }
+        });
+    }
+    private String grammarLabels(org.json.JSONArray values) {
+        StringBuilder text = new StringBuilder();
+        if (values != null) for (int i = 0; i < values.length(); i++) {
+            String value = values.optString(i);
+            if (value.equals("Ichidan verb")) value = "Verbo ichidan";
+            else if (value.startsWith("Godan verb")) value = "Verbo godan";
+            else if (value.equals("transitive verb")) value = "Transitivo";
+            else if (value.equals("intransitive verb")) value = "Intransitivo";
+            else if (value.equals("noun (common) (futsuumeishi)")) value = "Nome";
+            else if (value.equals("adjective (keiyoushi)")) value = "Adjetivo em い";
+            else if (value.startsWith("adjectival nouns")) value = "Adjetivo em な";
+            else if (value.equals("adverb (fukushi)")) value = "Advérbio";
+            else if (value.equals("particle")) value = "Partícula";
+            if (i > 0) text.append("; "); text.append(value);
+        }
+        return text.toString();
+    }
+    private String jsonList(org.json.JSONArray values) {
+        StringBuilder text = new StringBuilder(); if (values != null) for (int i = 0; i < values.length(); i++) { if (i > 0) text.append("; "); text.append(values.optString(i)); } return text.toString();
     }
     private void wordDetail(OfflineLexicon.Word word) {
         LinearLayout body = ui.card(); body.addView(ui.text(word.word, 30, ui.ink, true));
@@ -578,7 +623,7 @@ public final class MainActivity extends Activity {
     private void reference() {
         title("Referência de japonês"); ui.add(page, label("Consulta opcional: " + JapaneseReference.all().size() + " entradas em português. Frases, partículas, verbos e termos; sem exercícios."));
         ui.add(page, ui.button(referenceCategory + " ▾", false, () -> {
-            String[] categories = {"Frases", "Verbos", "Termos", "Expressões", "Tudo"};
+            String[] categories = {"Tudo", "Fundamentos", "Partículas", "Verbos e formas", "Adjetivos", "Números e tempo", "Pedidos e situações", "Frases", "Verbos", "Termos", "Expressões"};
             new AlertDialog.Builder(this).setTitle("Consultar").setItems(categories, (d,w) -> { referenceCategory = categories[w]; go("reference"); }).setNegativeButton("Fechar", null).show();
         }));
         EditText input = field(referenceQuery, "Pesquisar", 204, false);
@@ -587,11 +632,14 @@ public final class MainActivity extends Activity {
     }
     private void referenceList(LinearLayout list, int limit) {
         list.removeAllViews(); List<JapaneseReference.Entry> entries = JapaneseReference.search(referenceCategory, referenceQuery); ui.add(list, label((entries.size() == 0 ? "Sem resultados. Experimenta outra palavra ou categoria." : entries.size() + " resultados · " + referenceCategory)));
+        if (!referenceQuery.trim().isEmpty() && !referenceCategory.equals("Tudo") && JapaneseReference.search("Tudo", referenceQuery).size() > entries.size()) {
+            ui.add(list, ui.button("Pesquisar em todos os temas", false, () -> { referenceCategory = "Tudo"; render(); }));
+        }
         for (int i = 0; i < Math.min(entries.size(), limit); i++) {
             JapaneseReference.Entry entry = entries.get(i);
             Button button = ui.button(entry.meaning + "\n" + entry.japanese + " · " + entry.romaji(), false, () -> {
                 LinearLayout body = ui.card(); body.addView(ui.text(entry.japanese, 25, ui.ink, true));
-                ui.add(body, label(entry.reading + "\n" + entry.romaji() + "\n\n" + entry.meaning + (entry.detail.isEmpty() ? "" : "\n\n" + entry.detail)));
+                ui.add(body, label(entry.topic + "\n\n" + entry.reading + "\n" + entry.romaji() + "\n\n" + entry.meaning + (entry.detail.isEmpty() ? "" : "\n\n" + entry.detail)));
                 ui.add(body, ui.button("Ouvir", false, () -> speech.speak(entry.japanese, false))); ui.add(body, ui.button("Ouvir devagar", false, () -> speech.speak(entry.japanese, true)));
                 ui.add(body, ui.button("Copiar japonês", false, () -> copy(entry.japanese))); ScrollView view = new ScrollView(this); view.addView(body);
                 new AlertDialog.Builder(this).setView(view).setNegativeButton("Fechar", null).show();
@@ -647,7 +695,7 @@ public final class MainActivity extends Activity {
         if (dictionaryInput instanceof EditText) { dictionarySelection = ((EditText)dictionaryInput).getSelectionEnd(); dictionaryFocused = dictionaryInput.hasFocus(); }
         state.putBoolean("dictionaryMeaning", dictionaryMeaning); state.putInt("dictionaryLimit", dictionaryLimit); state.putString("detailOrigin", detailOrigin);
         state.putInt("detailReturnScroll", detailReturnScroll); state.putInt("dictionarySelection", dictionarySelection); state.putBoolean("dictionaryFocused", dictionaryFocused);
-        if (detailWord != null) { state.putString("detailWord", detailWord.word); state.putString("detailReading", detailWord.reading); state.putString("detailMeaning", detailWord.meaning); }
+        if (detailWord != null) { state.putString("detailWord", detailWord.word); state.putString("detailReading", detailWord.reading); state.putString("detailMeaning", detailWord.meaning); state.putLong("detailEntry", detailWord.entry); state.putString("detailOriginalReading", detailWord.originalReading); }
         super.onSaveInstanceState(state); state.putString("section", section); state.putString("draft", draft); state.putString("query", query); state.putString("category", category); state.putBoolean("katakana", katakana);
         state.putString("referenceCategory", referenceCategory); state.putString("referenceQuery", referenceQuery); state.putString("dictionaryQuery", dictionaryQuery); state.putString("chosenReading", chosenReading); state.putString("selectedKanji", selectedKanji); state.putInt("scroll", scroll.getScrollY()); state.putInt("outputMode", outputMode);
         ArrayList<String> choices = new ArrayList<>(); int count = RomajiConverter.convert(draft).hiragana.trim().split("\\s+").length;

@@ -8,6 +8,10 @@
 - Modo explícito de pesquisa nas definições em inglês; caracteres especiais tratados como texto literal.
 - Mais resultados são acrescentados por páginas; consultas obsoletas em fila são descartadas.
 - Testes de integração executam as consultas Java reais contra a base SQLite distribuída.
+- Base JMdict atualizada: 218 888 entradas, 325 038 pares e 253 766 sentidos separados, com classes gramaticais, notas de uso e leituras originais.
+- Instalação da base validada por esquema, integridade e SHA-256 antes da substituição da versão anterior.
+- Referência com 308 entradas: 18 explicações novas sobre partículas, formas verbais, adjetivos, tempo e situações; navegação por temas e pesquisa global.
+
 ## 5.0.0 — 2026-10-10
 
 - Corrigida a ocupação do Converter com teclado e a primeira linha Kana em paisagem larga.
