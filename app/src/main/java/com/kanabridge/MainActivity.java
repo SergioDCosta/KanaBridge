@@ -35,7 +35,6 @@ public final class MainActivity extends Activity {
     private SharedPreferences prefs;
     private SavedWords savedWords;
     private String referenceError;
-    private boolean referenceFromWord;
     private JapaneseSpeech speech;
     private OfflineLexicon lexicon;
     private LinearLayout shell, page, navigation, results, table;
@@ -51,6 +50,12 @@ public final class MainActivity extends Activity {
     private int dictionaryMode;
     private String savedQuery = "";
     private boolean katakana, dark, macrons;
+    private String currencyAmount = "";
+    private boolean yenToEuro, rateLoading;
+    private CurrencyConverter.Rate rate;
+    private long rateFetched;
+    private String rateStatus = "";
+    private TextView currencyResult, currencyRate, currencyStatus;
     private int generation;
     private int outputMode;
     private int navigationLeft, navigationRight, navigationBottom;
@@ -84,12 +89,12 @@ public final class MainActivity extends Activity {
             String initial = java.util.Arrays.asList("dictionary", "converter", "kana", "reference").contains(previous) ? previous : "converter";
             prefs.edit().putString("startSection", initial).apply();
         }
-        draft = prefs.getString("draft", ""); macrons = prefs.getBoolean("macrons", false);
+        draft = prefs.getString("draft", ""); macrons = prefs.getBoolean("macrons", false); loadRate();
         section = prefs.getString("section", prefs.getString("startSection", "dictionary"));
         if (state != null) {
             section = state.getString("section", "converter"); draft = state.getString("draft", draft);
             query = state.getString("query", ""); category = state.getString("category", KanaData.GOJUON); katakana = state.getBoolean("katakana");
-            referenceFromWord = state.getBoolean("referenceFromWord"); referenceCategory = state.getString("referenceCategory", "Tudo"); referenceQuery = state.getString("referenceQuery", ""); dictionaryQuery = state.getString("dictionaryQuery", "");
+            referenceCategory = state.getString("referenceCategory", "Tudo"); referenceQuery = state.getString("referenceQuery", ""); dictionaryQuery = state.getString("dictionaryQuery", "");
             chosenReading = state.getString("chosenReading", ""); selectedKanji = state.getString("selectedKanji", "");
             outputMode = state.getInt("outputMode");
             dictionaryLimit = state.getInt("dictionaryLimit", 30); dictionaryMode = state.getInt("dictionaryMode", state.getBoolean("dictionaryMeaning") ? 1 : 0); savedQuery = state.getString("savedQuery", "");
@@ -102,7 +107,7 @@ public final class MainActivity extends Activity {
             ArrayList<String> choices = state.getStringArrayList("composition");
             if (choices != null) for (int i = 0; i < choices.size(); i++) if (!choices.get(i).isEmpty()) composition.put(i, choices.get(i));
         }
-        if (!java.util.Arrays.asList("converter", "kana", "reference", "dictionary", "saved", "settings", "sources", "word").contains(section)) section = "converter";
+        if (!java.util.Arrays.asList("converter", "kana", "reference", "dictionary", "saved", "settings", "sources", "word", "currency").contains(section)) section = "converter";
         if (section.equals("word") && detailWord == null) section = "dictionary";
         getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
         getWindow().setStatusBarColor(Color.TRANSPARENT); getWindow().setNavigationBarColor(Color.BLACK);
@@ -186,7 +191,6 @@ public final class MainActivity extends Activity {
     }
     private void go(String target) {
         ((InputMethodManager)getSystemService(INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(shell.getWindowToken(), 0);
-        if (!target.equals("reference") && !target.equals("word")) referenceFromWord = false;
         section = target; render(); scroll.scrollTo(0, 0);
     }
     private void back() {
@@ -194,13 +198,12 @@ public final class MainActivity extends Activity {
             if (detailOrigin.equals("dictionary")) dictionaryReturnScroll = detailReturnScroll;
             go(detailOrigin);
             if (!detailOrigin.equals("dictionary")) scroll.post(() -> scroll.scrollTo(0, detailReturnScroll));
-        } else if (section.equals("reference") && referenceFromWord) { referenceFromWord = false; go("word"); }
-        else if (section.equals("saved")) go("dictionary");
+        } else if (section.equals("saved")) go("dictionary");
         else go("converter");
     }
     @Override public void onBackPressed() { if (!section.equals("converter")) back(); else super.onBackPressed(); }
     private void render() {
-        converterInput = null; simpleResult = null;
+        converterInput = null; simpleResult = null; currencyResult = null; currencyRate = null; currencyStatus = null;
         page.setPadding(ui.dp(16), ui.dp(Ui.SPACE), ui.dp(16), ui.dp(Ui.SPACE_LARGE));
         generation++; if (pending != null) handler.removeCallbacks(pending); page.removeAllViews();
         if (!compactKanaHeader()) {
@@ -218,16 +221,17 @@ public final class MainActivity extends Activity {
             case "word": dictionaryDetail(); break;
             case "settings": settings(); break;
             case "sources": sources(); break;
+            case "currency": currency(); break;
             default: converter();
         }
         navigation.removeAllViews();
-        String[] destinations = {"dictionary", "converter", "kana", "reference"};
-        String[] names = {"Dicionário", "Converter", "Kana", "Referência"};
-        int[] ids = {112, 110, 111, 113};
+        String[] destinations = {"dictionary", "converter", "kana", "reference", "currency"};
+        String[] names = {"Dicionário", "Converter", "Kana", "Referência", "Iene"};
+        int[] ids = {112, 110, 111, 113, 114};
         boolean stacked = getResources().getConfiguration().screenWidthDp < 520 || getResources().getConfiguration().fontScale > 1.3f;
         LinearLayout row = null;
         for (int i = 0; i < destinations.length; i++) {
-            if (i == 0 || (stacked && i == 2)) { row = ui.row(); navigation.addView(row, ui.wrap()); }
+            if (i == 0 || (stacked && i == 3)) { row = ui.row(); navigation.addView(row, ui.wrap()); }
             String target = destinations[i];
             boolean selected = section.equals(target) || (target.equals("dictionary") && (section.equals("saved") || section.equals("word")));
             Button button = ui.button(names[i], selected, () -> go(target)); button.setId(ids[i]);
@@ -240,8 +244,8 @@ public final class MainActivity extends Activity {
         }
     }
     private void menu() {
-        String[] labels = {"Dicionário offline", "Guardados", "Referência de japonês (opcional)", "Definições", "Fontes e licenças"};
-        String[] routes = {"dictionary", "saved", "reference", "settings", "sources"};
+        String[] labels = {"Dicionário offline", "Guardados", "Referência de japonês (opcional)", "Euro → Iene", "Definições", "Fontes e licenças"};
+        String[] routes = {"dictionary", "saved", "reference", "currency", "settings", "sources"};
         new AlertDialog.Builder(this).setTitle("Consulta e opções").setItems(labels, (d,w) -> go(routes[w])).setNegativeButton("Fechar", null).show();
     }
     private void title(String value) { ui.add(page, ui.heading(value)); }
@@ -483,23 +487,23 @@ public final class MainActivity extends Activity {
     }
 
     private void dictionary() {
-        title("Dicionário offline"); ui.add(page, label(dictionaryMode == 1 ? "Pesquisa nas definições em inglês." : dictionaryMode == 2 ? "Português: vocabulário essencial da Referência. Cobertura parcial; sentidos completos em inglês." : "Pesquisa em rōmaji, kana ou kanji. Definições em inglês."));
-        LinearLayout modes = ui.column(); String[] names = {"Japonês / rōmaji", "Significado (EN)", "Português (parcial)"};
+        title("Dicionário offline"); ui.add(page, label(dictionaryMode == 1 ? "Pesquisa nas definições em inglês." : "Pesquisa em rōmaji, kana ou kanji. Definições em inglês."));
+        String[] names = {"Japonês / rōmaji", "Significado (EN)"};
         LinearLayout languageRow = ui.row();
         for (int i = 0; i < names.length; i++) {
             final int mode = i;
             Button button = ui.button(names[i], dictionaryMode == mode, () -> { if (dictionaryMode == mode) return; dictionaryMode = mode; dictionaryLimit = 30; dictionaryReturnScroll = -1; render(); });
             ui.paint(button, dictionaryMode == mode);
-            if (i < 2) weighted(languageRow, button); else ui.add(modes, button);
-        } modes.addView(languageRow, 0); ui.add(page, modes);
+            weighted(languageRow, button);
+        } ui.add(page, languageRow);
         ui.add(page, ui.button("Guardados · " + savedWords.size(), false, () -> go("saved")));
-        EditText input = field(dictionaryQuery, dictionaryMode == 1 ? "Significado em inglês" : dictionaryMode == 2 ? "Palavra em português" : "Pesquisar palavra", 203, false); input.setContentDescription(dictionaryMode == 1 ? "Pesquisar significado em inglês: bridge, school" : dictionaryMode == 2 ? "Pesquisar em português: água, comer, estação" : "Pesquisar palavra em rōmaji, kana ou kanji: hashi, にほんご, 日本語"); ui.add(page, input); LinearLayout list = ui.column(); ui.add(page, list);
+        EditText input = field(dictionaryQuery, dictionaryMode == 1 ? "Significado em inglês" : "Pesquisar palavra", 203, false); input.setContentDescription(dictionaryMode == 1 ? "Pesquisar significado em inglês: bridge, school" : "Pesquisar palavra em rōmaji, kana ou kanji: hashi, にほんご, 日本語"); ui.add(page, input); LinearLayout list = ui.column(); ui.add(page, list);
         Runnable refresh = () -> {
             int request = ++generation;
             if (dictionaryQuery.trim().isEmpty()) { list.removeAllViews(); ui.add(list, label("Escreve ou cola uma palavra. Experimenta uma destas pesquisas:"));
-                for (String example : (dictionaryMode == 1 ? new String[]{"bridge", "school", "water"} : dictionaryMode == 2 ? new String[]{"água", "comer", "estação"} : new String[]{"nihongo", "hashi", "gakkou"})) ui.add(list, ui.button(example, false, () -> { input.setText(example); input.setSelection(input.length()); }));
+                for (String example : (dictionaryMode == 1 ? new String[]{"bridge", "school", "water"} : new String[]{"nihongo", "hashi", "gakkou"})) ui.add(list, ui.button(example, false, () -> { input.setText(example); input.setSelection(input.length()); }));
                 List<RecentQueries.Item> recent = RecentQueries.read(prefs.getString("recent_queries", ""));
-                if (!recent.isEmpty()) { ui.add(list, label("Consultas recentes · escolhidas por ti")); for (RecentQueries.Item item : recent) ui.add(list, ui.button(item.query + " · " + (item.mode == 1 ? "EN" : item.mode == 2 ? "PT" : "JP"), false, () -> { dictionaryQuery = item.query; dictionaryMode = item.mode; dictionaryLimit = 30; render(); })); }
+                if (!recent.isEmpty()) { ui.add(list, label("Consultas recentes · escolhidas por ti")); for (RecentQueries.Item item : recent) ui.add(list, ui.button(item.query + " · " + (item.mode == 1 ? "EN" : "JP"), false, () -> { dictionaryQuery = item.query; dictionaryMode = item.mode; dictionaryLimit = 30; render(); })); }
             }
             else if (dictionaryMode != 0 && dictionaryQuery.trim().length() < 2) { list.removeAllViews(); ui.add(list, label("Escreve pelo menos duas letras da pesquisa.")); }
             else { list.removeAllViews(); dictionaryPage(list, dictionaryQuery, dictionaryMode, 0, dictionaryLimit, request); }
@@ -540,9 +544,7 @@ public final class MainActivity extends Activity {
             for (int i = 0; i < count; i++) {
                 OfflineLexicon.Word word = words.get(i);
                 boolean exact = word.word.equals(query.trim()) || word.reading.equals(kana);
-                String preview = word.meaning;
-                if (mode == 2) { List<JapaneseReference.Entry> related = JapaneseReference.related(word.word, word.reading); if (!related.isEmpty()) preview = "PT: " + related.get(0).meaning + "\nEN: " + preview; }
-                Button card = ui.button(word.word + "  ·  " + word.originalReading + "\n" + preview + (mode == 0 && !exact ? "\nComeça por esta pesquisa" : ""), false, () -> openDictionaryDetail(word));
+                Button card = ui.button(word.word + "  ·  " + word.originalReading + "\n" + word.meaning + (mode == 0 && !exact ? "\nComeça por esta pesquisa" : ""), false, () -> openDictionaryDetail(word));
                 card.setGravity(Gravity.START | Gravity.CENTER_VERTICAL); card.setMaxLines(5); card.setEllipsize(android.text.TextUtils.TruncateAt.END);
                 card.setContentDescription(word.word + " · " + word.originalReading + ". " + word.meaning + ". Abrir detalhes."); ui.add(list, card);
             }
@@ -575,11 +577,6 @@ public final class MainActivity extends Activity {
         reading.setTextIsSelectable(true); ui.add(page, reading);
         ui.add(page, label("Definição em inglês · JMdict"));
         ui.add(page, saveButton(detailWord));
-        List<JapaneseReference.Entry> related = JapaneseReference.related(detailWord.word, detailWord.reading);
-        if (!related.isEmpty()) {
-            ui.add(page, label("Referência em português · cobertura parcial\n" + related.get(0).meaning));
-            ui.add(page, ui.button("Ver na Referência", false, () -> { referenceCategory = "Tudo"; referenceQuery = detailWord.word; referenceFromWord = true; go("reference"); }));
-        }
         LinearLayout senses = ui.column(); ui.add(page, senses); loadWordSenses(senses, detailWord, generation);
         ui.add(page, ui.button("Copiar palavra", false, () -> copy(detailWord.word)));
         ui.add(page, ui.button("Copiar leitura", false, () -> copy(detailWord.originalReading)));
@@ -706,8 +703,8 @@ public final class MainActivity extends Activity {
     private void settings() {
         title("Definições");
         String start = prefs.getString("startSection", "dictionary");
-        String[] startRoutes = {"dictionary", "converter", "kana", "reference"};
-        String[] startNames = {"Dicionário", "Converter", "Kana", "Referência"};
+        String[] startRoutes = {"dictionary", "converter", "kana", "reference", "currency"};
+        String[] startNames = {"Dicionário", "Converter", "Kana", "Referência", "Iene"};
         int startIndex = java.util.Arrays.asList(startRoutes).indexOf(start);
         ui.add(page, ui.button("Ecrã inicial: " + startNames[Math.max(0, startIndex)], false, () -> {
             new AlertDialog.Builder(this).setTitle("Ecrã inicial").setItems(startNames, (d,w) -> {
@@ -722,12 +719,14 @@ public final class MainActivity extends Activity {
         ui.add(page, ui.button("Rōmaji: " + (macrons ? "com mácrones (ō, ū)" : "vogais por extenso (ou, uu)"), false, () -> { macrons = !macrons; prefs.edit().putBoolean("macrons", macrons).apply(); render(); }));
         ui.add(page, ui.button("Limpar consultas recentes", false, () -> { prefs.edit().remove("recent_queries").apply(); message("Consultas recentes", "Histórico local limpo."); }));
         ui.add(page, ui.button("Testar voz japonesa", false, () -> speech.speak("こんにちは", false)));
-        ui.add(page, label("O tamanho do texto acompanha as definições de acessibilidade do Android. A tabela adapta-se a texto grande.\n\nKanaBridge 5 · Android 6–16 · sem conta e sem Internet. Voz japonesa requer um pacote offline instalado no telemóvel."));
+        ui.add(page, label("O tamanho do texto acompanha as definições de acessibilidade do Android. A tabela adapta-se a texto grande.\n\nKanaBridge 5.2 · Android 6–16 · sem conta. A única ligação à Internet é a do conversor de euros, que pede a taxa do dia (sem enviar dados pessoais); o resto funciona offline. Voz japonesa requer um pacote offline instalado no telemóvel."));
     }
     private void sources() {
         title("Fontes e licenças");
         TextView text = label("Dicionário: JMdict © James William Breen e Electronic Dictionary Research and Development Group (EDRDG). Derivado SQLite sob CC BY-SA 4.0, com leituras normalizadas, restrições de grafia e ordenação pela prioridade da fonte. Significados em inglês.\n\nhttps://www.edrdg.org/\nhttps://www.edrdg.org/edrdg/licence.html\nhttps://creativecommons.org/licenses/by-sa/4.0/\n\nA referência em português foi escrita para esta app. Não constitui um tradutor automático de frases. Nomes próprios, flexões e ambiguidades podem não ter correspondência direta.");
         android.text.util.Linkify.addLinks(text, android.text.util.Linkify.WEB_URLS); text.setLinkTextColor(ui.accent); ui.add(page, text);
+        TextView rates = label("Câmbio: taxa de referência do Banco Central Europeu, obtida através do serviço Frankfurter (https://frankfurter.dev). O pedido contém apenas o par EUR/JPY. A última taxa fica guardada no telemóvel para uso sem ligação.");
+        android.text.util.Linkify.addLinks(rates, android.text.util.Linkify.WEB_URLS); rates.setLinkTextColor(ui.accent); ui.add(page, rates);
         try {
             org.json.JSONObject metadata = new org.json.JSONObject(assetText("lexicon-source.json"));
             ui.add(page, label("Dicionário incluído: " + metadata.getInt("entries") + " entradas. Preparado em " + metadata.getString("generated").substring(0, 10) + "."));
@@ -739,6 +738,77 @@ public final class MainActivity extends Activity {
         try (java.io.InputStream input = getAssets().open(name); java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream()) {
             byte[] buffer = new byte[4096]; int count; while ((count = input.read(buffer)) != -1) out.write(buffer, 0, count); return out.toString("UTF-8");
         }
+    }
+    // ---- Euro → iene -------------------------------------------------------------------------
+    private void loadRate() {
+        String stored = prefs.getString("rate_value", ""); String date = prefs.getString("rate_date", "");
+        try { if (!stored.isEmpty() && !date.isEmpty()) rate = new CurrencyConverter.Rate(Double.parseDouble(stored), date); } catch (NumberFormatException ignored) { rate = null; }
+        rateFetched = prefs.getLong("rate_fetched", 0);
+        currencyAmount = prefs.getString("currency_amount", ""); yenToEuro = prefs.getBoolean("currency_reverse", false);
+    }
+    private void currency() {
+        title(yenToEuro ? "Iene → Euro" : "Euro → Iene");
+        ui.add(page, label("Taxa de referência do Banco Central Europeu, atualizada nos dias úteis. O resultado muda enquanto escreves."));
+        LinearLayout directions = ui.row();
+        Button forward = ui.button("€ → ¥", !yenToEuro, () -> setCurrencyDirection(false)); ui.paint(forward, !yenToEuro); forward.setId(230); weighted(directions, forward);
+        Button reverse = ui.button("¥ → €", yenToEuro, () -> setCurrencyDirection(true)); ui.paint(reverse, yenToEuro); reverse.setId(231); weighted(directions, reverse);
+        ui.add(page, directions);
+        EditText input = field(currencyAmount, yenToEuro ? "Montante em ienes (¥)" : "Montante em euros (€)", 205, false);
+        input.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        input.setFilters(new InputFilter[]{new InputFilter.LengthFilter(16)});
+        ui.add(page, input);
+        LinearLayout card = ui.card();
+        currencyResult = ui.text("", 32, ui.accent, true); currencyResult.setId(232); currencyResult.setTextIsSelectable(true); card.addView(currencyResult);
+        currencyRate = label(""); ui.add(card, currencyRate);
+        currencyStatus = label(""); ui.add(card, currencyStatus);
+        ui.add(page, card);
+        ui.add(page, ui.button("Copiar resultado", false, () -> { String value = currencyOutput(); if (value.isEmpty()) message("Câmbio", "Escreve primeiro um montante."); else copy(value); }));
+        ui.add(page, ui.button("Atualizar taxa", false, () -> refreshRate(true)));
+        watch(input, value -> { currencyAmount = value; prefs.edit().putString("currency_amount", value).apply(); updateCurrency(); });
+        updateCurrency(); refreshRate(false);
+    }
+    private void setCurrencyDirection(boolean reverse) {
+        if (yenToEuro == reverse) return;
+        yenToEuro = reverse; prefs.edit().putBoolean("currency_reverse", reverse).apply(); render();
+    }
+    /** The converted figure alone, e.g. "17 746 ¥", or an empty string when it cannot be computed. */
+    private String currencyOutput() {
+        double amount = CurrencyConverter.parseAmount(currencyAmount);
+        if (rate == null || amount < 0) return "";
+        return yenToEuro ? CurrencyConverter.formatEuro(CurrencyConverter.toEuro(amount, rate)) + " €" : CurrencyConverter.formatYen(CurrencyConverter.toYen(amount, rate)) + " ¥";
+    }
+    private void updateCurrency() {
+        if (currencyResult == null) return;
+        String output = currencyOutput();
+        currencyResult.setText(output.isEmpty() ? "—" : output);
+        currencyRate.setText(rate == null ? "Ainda sem taxa." : "1 € = " + CurrencyConverter.formatRate(rate.yenPerEuro) + " ¥ · taxa de " + CurrencyConverter.formatDate(rate.date));
+        double amount = CurrencyConverter.parseAmount(currencyAmount);
+        String status = rateStatus;
+        if (status.isEmpty() && rate != null && amount < 0 && !currencyAmount.trim().isEmpty()) status = "Montante não reconhecido. Usa só números, por exemplo 1250 ou 12,50.";
+        else if (status.isEmpty() && rate != null && currencyAmount.trim().isEmpty()) status = "Escreve um montante para converter.";
+        currencyStatus.setText(status);
+        currencyResult.setContentDescription(output.isEmpty() ? "Sem resultado" : "Resultado: " + output);
+    }
+    /** Downloads at most one small JSON document; a failure keeps whatever rate was stored before. */
+    private void refreshRate(boolean force) {
+        if (rateLoading) return;
+        if (!force && rate != null && System.currentTimeMillis() - rateFetched < 3600000L) { rateStatus = ""; updateCurrency(); return; }
+        rateLoading = true; rateStatus = "A atualizar a taxa…"; updateCurrency();
+        new Thread(() -> {
+            CurrencyConverter.Rate fresh = null;
+            try { fresh = CurrencyConverter.fetch(); } catch (Exception ignored) { }
+            final CurrencyConverter.Rate result = fresh;
+            runOnUiThread(() -> {
+                rateLoading = false;
+                if (result != null) {
+                    rate = result; rateFetched = System.currentTimeMillis();
+                    prefs.edit().putString("rate_value", Double.toString(result.yenPerEuro)).putString("rate_date", result.date).putLong("rate_fetched", rateFetched).apply();
+                    rateStatus = "Atualizada agora.";
+                } else if (rate != null) rateStatus = "Sem ligação. A usar a taxa guardada de " + CurrencyConverter.formatDate(rate.date) + ".";
+                else rateStatus = "Sem taxa guardada. Liga-te à Internet uma vez para obter a primeira.";
+                updateCurrency();
+            });
+        }, "kanabridge-rate").start();
     }
     private void message(String title, String text) { new AlertDialog.Builder(this).setTitle(title).setMessage(text).setPositiveButton("Fechar", null).show(); }
     private void copy(String value) { ((ClipboardManager)getSystemService(CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("KanaBridge", value)); if (android.os.Build.VERSION.SDK_INT < 33) android.widget.Toast.makeText(this, "Copiado", android.widget.Toast.LENGTH_SHORT).show(); }
@@ -754,7 +824,7 @@ public final class MainActivity extends Activity {
         state.putInt("detailReturnScroll", detailReturnScroll); state.putInt("dictionarySelection", dictionarySelection); state.putBoolean("dictionaryFocused", dictionaryFocused);
         if (detailWord != null) { state.putString("detailWord", detailWord.word); state.putString("detailReading", detailWord.reading); state.putString("detailMeaning", detailWord.meaning); state.putLong("detailEntry", detailWord.entry); state.putString("detailOriginalReading", detailWord.originalReading); }
         super.onSaveInstanceState(state); state.putString("section", section); state.putString("draft", draft); state.putString("query", query); state.putString("category", category); state.putBoolean("katakana", katakana);
-        state.putBoolean("referenceFromWord", referenceFromWord); state.putString("referenceCategory", referenceCategory); state.putString("referenceQuery", referenceQuery); state.putString("dictionaryQuery", dictionaryQuery); state.putString("chosenReading", chosenReading); state.putString("selectedKanji", selectedKanji); state.putInt("scroll", scroll.getScrollY()); state.putInt("outputMode", outputMode);
+        state.putString("referenceCategory", referenceCategory); state.putString("referenceQuery", referenceQuery); state.putString("dictionaryQuery", dictionaryQuery); state.putString("chosenReading", chosenReading); state.putString("selectedKanji", selectedKanji); state.putInt("scroll", scroll.getScrollY()); state.putInt("outputMode", outputMode);
         ArrayList<String> choices = new ArrayList<>(); int count = RomajiConverter.convert(draft).hiragana.trim().split("\\s+").length;
         for (int i = 0; i < count; i++) choices.add(composition.containsKey(i) ? composition.get(i) : ""); state.putStringArrayList("composition", choices);
     }

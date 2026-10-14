@@ -1,6 +1,6 @@
-# KanaBridge 5.1
+# KanaBridge 5.2
 
-Aplicação Android em português para converter rōmaji e consultar kana e palavras japonesas. Simples, offline, sem contas, publicidade ou permissão de Internet.
+Aplicação Android em português para converter rōmaji e consultar kana e palavras japonesas. Simples e offline, sem contas nem publicidade. A única ligação à Internet é a do conversor de euros para ienes, que pede a taxa do dia.
 
 ## Download
 
@@ -8,11 +8,17 @@ Aplicação Android em português para converter rōmaji e consultar kana e pala
 
 No Android, abre o APK e permite a instalação pela aplicação que o abriu. Para atualizar uma instalação existente, a assinatura tem de ser a mesma. Compatibilidade prevista: Android 6 ou superior (API 23); compilada para Android 16 (API 36).
 
+## Novidades da 5.2
+
+- **Euro → Iene:** novo separador com conversão direta entre euros e ienes (nos dois sentidos), a partir da taxa de referência do Banco Central Europeu, publicada nos dias úteis. A taxa é pedida ao abrir o separador (no máximo uma vez por hora) ou ao tocar em *Atualizar taxa*; a última fica guardada e a data aparece sempre junto do resultado. Sem ligação, usa a taxa guardada.
+- **Dicionário só em inglês e japonês:** removida a pesquisa em português e as pré-visualizações em português nos resultados e no detalhe. Os sentidos continuam em inglês, como no JMdict. A Referência de japonês mantém-se como secção própria.
+- A app passa a declarar a permissão `INTERNET`, usada apenas para o pedido de câmbio (ver *Privacidade e dados*).
+
 ## Novidades da 5.1
 
 A release estável 5.1.0 está disponível no download acima. O dicionário inclui 218 888 entradas, 325 038 pares de grafia/leitura e 253 766 sentidos. A Referência tem 570 entradas em português: 80 estruturas, 160 verbos, 250 termos e 80 expressões.
 
-A pesquisa dispõe de modos japonês/rōmaji, significado em inglês e português parcial, com 356 fichas da Referência ligadas ao JMdict. Os sentidos completos continuam em inglês. Inclui paginação, detalhe por sentidos, ligações à Referência, favoritos com identidade e leitura próprias, filtro dos guardados e até 30 consultas recentes locais. As consultas só são registadas ao abrir um resultado e podem ser eliminadas nas definições.
+A pesquisa dispõe de modos japonês/rōmaji e significado em inglês. (Na 5.2 foi retirado o modo em português, que a 5.1 oferecia com cobertura parcial.) Inclui paginação, detalhe por sentidos, ligações à Referência, favoritos com identidade e leitura próprias, filtro dos guardados e até 30 consultas recentes locais. As consultas só são registadas ao abrir um resultado e podem ser eliminadas nas definições.
 
 Quando não há resultados japoneses, algumas flexões conhecidas dos verbos da Referência sugerem a forma de dicionário, mantendo alternativas ambíguas. A Referência inclui sete formas por verbo, explicações de uso e um segundo exemplo em cada uma das 80 estruturas. Esta cobertura é editorial e limitada; não constitui análise morfológica geral nem revisão linguística externa.
 
@@ -22,7 +28,7 @@ A base extraída ocupa cerca de 80,3 MB, abaixo dos 96,1 MB da primeira expansã
 
 - **Converter:** rōmaji para Hiragana/Katakana, consulta de opções de Kanji e conversão inversa para rōmaji. Permite copiar resultados.
 - **Kana:** tabelas Hiragana/Katakana, pesquisa por som ou símbolo e detalhes dos caracteres.
-- **Dicionário offline:** JMdict com 218 888 entradas e 325 038 pares de grafia/leitura; sentidos completos em inglês e pesquisa em português com cobertura parcial.
+- **Dicionário offline:** JMdict com 218 888 entradas e 325 038 pares de grafia/leitura; sentidos em inglês e pesquisa por japonês/rōmaji ou por significado em inglês.
 - **Guardados:** palavras favoritas com identidade e leitura próprias, filtro e abertura direta do detalhe.
 - **Referência:** 570 entradas em português sobre estruturas, verbos, termos e expressões.
 - Temas claro, escuro e sistema; texto acompanha a escala do Android.
@@ -34,7 +40,7 @@ Não é um tradutor automático de frases. Não faz análise sintática nem conj
 
 ## Privacidade e dados
 
-Rascunhos e guardados ficam no telemóvel; backup automático desativado. A app não solicita Internet, microfone ou câmara. A instalação de uma voz japonesa pelo sistema pode precisar de Internet.
+Rascunhos e guardados ficam no telemóvel; backup automático desativado. A app não pede microfone nem câmara. Só pede Internet no conversor de euros: um único pedido HTTPS ao serviço Frankfurter (frankfurter.dev) para o par EUR/JPY, sem enviar identificadores nem dados pessoais. Tudo o resto — dicionário, kana, referência e conversor de texto — funciona sem ligação. A instalação de uma voz japonesa pelo sistema pode precisar de Internet.
 
 ## Validação da 5.1
 

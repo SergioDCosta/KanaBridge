@@ -14,7 +14,8 @@ $sources = @(
     (Join-Path $javaRoot "JapaneseReference.java"),
     (Join-Path $javaRoot "LexiconQueries.java"),
     (Join-Path $javaRoot "SavedEntry.java"),
-    (Join-Path $javaRoot "RecentQueries.java")
+    (Join-Path $javaRoot "RecentQueries.java"),
+    (Join-Path $javaRoot "CurrencyConverter.java")
 )
 $tests = @(Get-ChildItem -LiteralPath (Join-Path $projectRoot "tests") -Filter '*.java' | ForEach-Object FullName)
 
@@ -29,4 +30,6 @@ if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 java -cp $testDir com.kanabridge.RomajiConverterTest
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 java -cp $testDir com.kanabridge.DictionaryStateTest
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+java -cp $testDir com.kanabridge.CurrencyConverterTest
 exit $LASTEXITCODE

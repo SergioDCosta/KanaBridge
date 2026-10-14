@@ -28,7 +28,6 @@ public final class JapaneseReference {
         }
         public String romaji() { return romaji; }
     }
-    private static volatile java.util.Map<String,List<Entry>> relatedEntries = Collections.emptyMap();
     private static volatile java.util.Map<String,List<Entry>> inflections = Collections.emptyMap();
     private static volatile List<Entry> entries = Collections.emptyList();
     public static boolean loaded() { return !entries.isEmpty(); }
@@ -54,12 +53,7 @@ public final class JapaneseReference {
             if (matches == null) { matches = new ArrayList<>(); index.put(key, matches); }
             if (!matches.contains(entry)) matches.add(entry);
         }
-        java.util.Map<String,List<Entry>> related = new java.util.HashMap<>();
-        for (Entry entry : result) if (entry.category.equals("Verbos") || entry.category.equals("Termos")) {
-            String key = entry.japanese + "\0" + KanaData.toHiragana(entry.reading); List<Entry> matches = related.get(key);
-            if (matches == null) { matches = new ArrayList<>(); related.put(key, matches); } matches.add(entry);
-        }
-        relatedEntries = related; inflections = index; entries = Collections.unmodifiableList(result);
+        inflections = index; entries = Collections.unmodifiableList(result);
     }
     private static String text(Element node, String key) { NodeList list = node.getElementsByTagName(key); return list.getLength() == 0 ? "" : list.item(0).getTextContent(); }
     public static List<Entry> all() { return entries; }
@@ -71,9 +65,5 @@ public final class JapaneseReference {
     public static List<Entry> inflected(String query) {
         String key = KanaData.toHiragana(RomajiConverter.convert(query.trim()).hiragana);
         List<Entry> matches = inflections.get(key); return matches == null ? Collections.emptyList() : Collections.unmodifiableList(matches);
-    }
-    public static List<Entry> related(String word, String reading) {
-        List<Entry> matches = relatedEntries.get(word + "\0" + reading);
-        return matches == null ? Collections.emptyList() : Collections.unmodifiableList(matches);
     }
 }

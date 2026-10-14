@@ -1,5 +1,15 @@
 # Changelog
 
+## 5.2.0 — 2026-10-14
+
+- Novo separador **Iene** com conversor direto euro ⇄ iene, a partir da taxa de referência do Banco Central Europeu (serviço Frankfurter, endpoint `/v2/rate/EUR/JPY`). O resultado atualiza-se enquanto se escreve; aceita `12,5`, `12.5` e `1 234,50`.
+- A taxa é pedida ao abrir o separador (no máximo uma vez por hora) ou em *Atualizar taxa*; a última taxa e a sua data ficam guardadas para uso sem ligação. Se o pedido falhar, mantém-se a taxa guardada e a interface explica-o.
+- Acrescentada a permissão `INTERNET`, usada apenas por este pedido. O ecrã Fontes regista a origem das taxas.
+- Dicionário limitado a japonês/rōmaji e significado em inglês: removidos o modo de pesquisa em português, as pré-visualizações em português e a ligação do detalhe de palavra à Referência. Consultas recentes em português guardadas pela 5.1 são ignoradas.
+- Removido o código sem uso que ligava o dicionário à Referência. A secção Referência de japonês não foi alterada.
+- Testes: 51 verificações do conversor de câmbio (interpretação da resposta, montantes, arredondamentos, formatação); testes do dicionário e do histórico ajustados ao fim do modo português.
+- APK principal 5.2.0 (versionCode 7).
+
 ## 5.1.0 — 2026-10-11
 
 - Dicionário e Referência acessíveis na navegação principal; ecrã inicial configurável.

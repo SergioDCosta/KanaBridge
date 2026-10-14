@@ -2,6 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.kanabridge">
     <uses-sdk android:minSdkVersion="23" android:targetSdkVersion="36" />
+    <uses-permission android:name="android.permission.INTERNET" />
     <queries>
         <intent><action android:name="android.intent.action.TTS_SERVICE" /></intent>
     </queries>
