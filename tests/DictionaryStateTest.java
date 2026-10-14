@@ -14,7 +14,9 @@ public final class DictionaryStateTest {
   String recent="";for(int i=0;i<40;i++)recent=RecentQueries.add(recent,"query "+i,0);
   check(RecentQueries.read(recent).size()==30,"history capped at 30");check(RecentQueries.read(recent).get(0).query.equals("query 39"),"newest first");
   recent=RecentQueries.add(recent,"query 20",0);check(RecentQueries.read(recent).size()==30&&RecentQueries.read(recent).get(0).query.equals("query 20"),"duplicate moves to front");
-  recent=RecentQueries.add(recent,"água\t\n% +",2);check(RecentQueries.read(recent).get(0).query.equals("água\t\n% +")&&RecentQueries.read(recent).get(0).mode==2,"query and mode round trip");
+  recent=RecentQueries.add(recent,"bridge\t\n% +",1);check(RecentQueries.read(recent).get(0).query.equals("bridge\t\n% +")&&RecentQueries.read(recent).get(0).mode==1,"query and mode round trip");
+  check(RecentQueries.add(recent,"água",2).equals(recent),"Portuguese searches no longer accepted");
+  check(RecentQueries.read("2\t"+SavedEntry.encode("água")+"\n0\t"+SavedEntry.encode("hashi")).size()==1,"stored Portuguese history dropped on read");
   check(RecentQueries.add(recent,"",0).equals(recent),"blank query not retained");
   try(java.io.InputStream in=new java.io.FileInputStream("app/src/main/assets/reference.xml")){JapaneseReference.load(in);}
   check(JapaneseReference.inflected("tabemashita").stream().anyMatch(e->e.japanese.equals("食べる")),"polite past mapped to reviewed dictionary form");
