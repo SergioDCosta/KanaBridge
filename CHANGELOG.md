@@ -8,6 +8,7 @@
 - Dicionário limitado a japonês/rōmaji e significado em inglês: removidos o modo de pesquisa em português, as pré-visualizações em português e a ligação do detalhe de palavra à Referência. Consultas recentes em português guardadas pela 5.1 são ignoradas.
 - Removido o código sem uso que ligava o dicionário à Referência. A secção Referência de japonês não foi alterada.
 - Testes: 51 verificações do conversor de câmbio (interpretação da resposta, montantes, arredondamentos, formatação); testes do dicionário e do histórico ajustados ao fim do modo português.
+- Assinatura: a chave das releases 5.0.0 e 5.1.0 (SHA-256 `6b3788…0a77`) não estava disponível; a 5.2.0 é assinada com a chave `cc4971…ab3d`. Consequência: não atualiza por cima da 5.1 e exige desinstalar primeiro, com perda dos guardados e do histórico locais. Daqui em diante manter `tools/kanabridge-release.jks` (fora do Git) e fazer cópia de segurança.
 - APK principal 5.2.0 (versionCode 7).
 
 ## 5.1.0 — 2026-10-11

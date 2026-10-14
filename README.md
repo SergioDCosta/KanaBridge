@@ -12,6 +12,7 @@ No Android, abre o APK e permite a instalação pela aplicação que o abriu. Pa
 
 - **Euro → Iene:** novo separador com conversão direta entre euros e ienes (nos dois sentidos), a partir da taxa de referência do Banco Central Europeu, publicada nos dias úteis. A taxa é pedida ao abrir o separador (no máximo uma vez por hora) ou ao tocar em *Atualizar taxa*; a última fica guardada e a data aparece sempre junto do resultado. Sem ligação, usa a taxa guardada.
 - **Dicionário só em inglês e japonês:** removida a pesquisa em português e as pré-visualizações em português nos resultados e no detalhe. Os sentidos continuam em inglês, como no JMdict. A Referência de japonês mantém-se como secção própria.
+- **Nova chave de assinatura (importante):** as releases 5.0.0 e 5.1.0 foram assinadas com uma chave que já não está disponível, por isso a 5.2.0 **não atualiza por cima** da 5.1: o Android responde "o pacote entra em conflito com um pacote existente". Desinstala a versão anterior (isto apaga os guardados e as consultas recentes, porque a app não tem cópia de segurança) e instala a 5.2.0. As atualizações seguintes funcionam normalmente, desde que se mantenha a mesma chave.
 - A app passa a declarar a permissão `INTERNET`, usada apenas para o pedido de câmbio (ver *Privacidade e dados*).
 
 ## Novidades da 5.1
