@@ -12,12 +12,12 @@ No Android, abre o APK e permite a instalação pela aplicação que o abriu. Pa
 
 - **Euro → Iene:** novo separador com conversão direta entre euros e ienes (nos dois sentidos), a partir da taxa de referência do Banco Central Europeu, publicada nos dias úteis. A taxa é pedida ao abrir o separador (no máximo uma vez por hora) ou ao tocar em *Atualizar taxa*; a última fica guardada e a data aparece sempre junto do resultado. Sem ligação, usa a taxa guardada.
 - **Dicionário só em inglês e japonês:** removida a pesquisa em português e as pré-visualizações em português nos resultados e no detalhe. Os sentidos continuam em inglês, como no JMdict. A Referência de japonês mantém-se como secção própria.
-- **Nova chave de assinatura (importante):** as releases 5.0.0 e 5.1.0 foram assinadas com uma chave que já não está disponível, por isso a 5.2.0 **não atualiza por cima** da 5.1: o Android responde "o pacote entra em conflito com um pacote existente". Desinstala a versão anterior (isto apaga os guardados e as consultas recentes, porque a app não tem cópia de segurança) e instala a 5.2.0. As atualizações seguintes funcionam normalmente, desde que se mantenha a mesma chave.
+- **Assinatura:** o APK 5.2.0 inicialmente publicado usou um certificado diferente (`cc4971…ab3d`) e não atualiza instalações 5.0/5.1. A chave original (`6b3788…0a77`) foi localizada neste PC; não estava perdida. Este checkout voltou a exigir o certificado original nas compilações de produção. A correção local ainda não substituiu o APK da release pública. Não desinstales a instalação antiga para contornar esse conflito: a desinstalação apaga os dados locais. Uma instalação já feita com a chave diferente exige uma decisão de migração própria.
 - A app passa a declarar a permissão `INTERNET`, usada apenas para o pedido de câmbio (ver *Privacidade e dados*).
 
 ## Novidades da 5.1
 
-A release estável 5.1.0 está disponível no download acima. O dicionário inclui 218 888 entradas, 325 038 pares de grafia/leitura e 253 766 sentidos. A Referência tem 570 entradas em português: 80 estruturas, 160 verbos, 250 termos e 80 expressões.
+A versão 5.1.0 introduziu as melhorias seguintes; o download acima aponta para a release mais recente. O dicionário inclui 218 888 entradas, 325 038 pares de grafia/leitura e 253 766 sentidos. A Referência tem 570 entradas em português: 80 estruturas, 160 verbos, 250 termos e 80 expressões.
 
 A pesquisa dispõe de modos japonês/rōmaji e significado em inglês. (Na 5.2 foi retirado o modo em português, que a 5.1 oferecia com cobertura parcial.) Inclui paginação, detalhe por sentidos, ligações à Referência, favoritos com identidade e leitura próprias, filtro dos guardados e até 30 consultas recentes locais. As consultas só são registadas ao abrir um resultado e podem ser eliminadas nas definições.
 
@@ -49,7 +49,7 @@ Passaram 1 378 verificações Java, integridade e hashes SQLite, consultas Java 
 
 ## Compilar e testar no Windows
 
-Requer JDK 17/21, Android SDK com plataforma API 36, Build Tools 36.0.0 e Python 3 para a compressão do APK e os testes SQLite/Referência/contraste. Define `ANDROID_SDK_ROOT` para a localização do SDK.
+Requer JDK 17/21, Android SDK com plataforma API 36, Build Tools 36.0.0 e Python 3 para a compressão do APK e os testes SQLite/Referência/contraste. Define `ANDROID_SDK_ROOT` para a localização do SDK. Para compilar o APK, define também `KANABRIDGE_KEYSTORE_PASSWORD` no ambiente com a palavra-passe privada do keystore; não a guardes no código nem no Git.
 
 ```powershell
 .\run-tests.ps1
@@ -63,7 +63,7 @@ python tests/ui_contrast_test.py
 
 O APK fica em `dist/KanaBridge.apk`. `build-apk.ps1 -Kanateste` compila a variante independente Kanateste; `-Preview` cria outra variante de desenvolvimento. `run-dictionary-device-tests.ps1 -Serial <serial>` instala temporariamente o probe de diagnóstico, testa o repositório e a migração com preferências separadas e remove-o no fim. O Android pode pedir autorização para essa instalação. Os testes Android executáveis recusam dispositivos físicos; num emulador, limpam os dados da app de teste.
 
-A chave local `tools/kanabridge-release.jks` é reutilizada e ignorada pelo Git. Preserva-a para assinar futuras atualizações; APKs compilados com outra chave não atualizam diretamente as instalações existentes.
+A chave original `tools/kanabridge-release.jks` é privada e ignorada pelo Git. Preserva uma cópia segura fora do checkout. Certificado SHA-256 esperado: `6b378887f2d90168a704500de28bb44a3a6ab172c8c98ea2aed4538079dc0a77`. A compilação de produção recusa uma chave ausente ou com outro certificado, antes de gerar o APK. Variantes independentes podem criar `tools/kanabridge-development.jks` quando não existe a chave original; essa chave não serve para atualizar a app principal.
 
 ## Dicionário e atribuições
 

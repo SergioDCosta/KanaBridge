@@ -27,8 +27,8 @@ public final class DictionaryProbe extends Instrumentation {
    repository=new OfflineLexicon(getTargetContext()); CountDownLatch reference=new CountDownLatch(1);String[] failure={null};
    repository.prepareReference(error->{failure[0]=error;reference.countDown();});check(reference.await(20,TimeUnit.SECONDS)&&failure[0]==null,"reference asset loaded");
    long first=SystemClock.elapsedRealtime();query("hashi",0,false);result.putLong("first_query_ms",SystemClock.elapsedRealtime()-first);
-   for(int mode=0;mode<3;mode++){
-    String text=mode==0?"hashi":mode==1?"bridge":"agua";long[] samples=new long[20];
+   for(int mode=0;mode<2;mode++){
+    String text=mode==0?"hashi":"bridge";long[] samples=new long[20];
     for(int i=0;i<20;i++){long start=SystemClock.elapsedRealtimeNanos();List<OfflineLexicon.Word> words=query(text,mode,false);check(!words.isEmpty(),"mode "+mode+" returns words");samples[i]=SystemClock.elapsedRealtimeNanos()-start;}
     Arrays.sort(samples);result.putDouble("mode_"+mode+"_p95_ms",samples[18]/1000000.0);
    }

@@ -1,5 +1,12 @@
 # Changelog
 
+## Correção local de assinatura — ainda não publicada
+
+- Chave original das releases 5.0/5.1 localizada e validada contra o APK público 5.1.0. O APK 5.2.0 foi recompilado localmente com esse certificado.
+- Compilação de produção recusa chave ausente ou diferente; apenas variantes independentes podem gerar uma chave de desenvolvimento. Palavra-passe recebida por variável de ambiente.
+- Probe ajustado aos dois modos de pesquisa da 5.2, sem a consulta PT removida.
+- Validação: 1 431 verificações Java, SQLite/pesquisa/Referência/contraste aprovados; guardas testadas com chave ausente e certificado incorreto. APK final assinado, versão 5.2.0/code 7; sem teste físico nesta revisão porque não havia dispositivo ligado.
+
 ## 5.2.0 — 2026-10-14
 
 - Novo separador **Iene** com conversor direto euro ⇄ iene, a partir da taxa de referência do Banco Central Europeu (serviço Frankfurter, endpoint `/v2/rate/EUR/JPY`). O resultado atualiza-se enquanto se escreve; aceita `12,5`, `12.5` e `1 234,50`.
@@ -8,7 +15,7 @@
 - Dicionário limitado a japonês/rōmaji e significado em inglês: removidos o modo de pesquisa em português, as pré-visualizações em português e a ligação do detalhe de palavra à Referência. Consultas recentes em português guardadas pela 5.1 são ignoradas.
 - Removido o código sem uso que ligava o dicionário à Referência. A secção Referência de japonês não foi alterada.
 - Testes: 51 verificações do conversor de câmbio (interpretação da resposta, montantes, arredondamentos, formatação); testes do dicionário e do histórico ajustados ao fim do modo português.
-- Assinatura: a chave das releases 5.0.0 e 5.1.0 (SHA-256 `6b3788…0a77`) não estava disponível; a 5.2.0 é assinada com a chave `cc4971…ab3d`. Consequência: não atualiza por cima da 5.1 e exige desinstalar primeiro, com perda dos guardados e do histórico locais. Daqui em diante manter `tools/kanabridge-release.jks` (fora do Git) e fazer cópia de segurança.
+- Assinatura: a chave das releases 5.0.0 e 5.1.0 (SHA-256 `6b3788…0a77`) não estava disponível no ambiente de publicação (localizada posteriormente neste PC); a 5.2.0 é assinada com a chave `cc4971…ab3d`. Consequência: não atualiza por cima da 5.1 e exige desinstalar primeiro, com perda dos guardados e do histórico locais. Daqui em diante manter `tools/kanabridge-release.jks` (fora do Git) e fazer cópia de segurança.
 - APK principal 5.2.0 (versionCode 7).
 
 ## 5.1.0 — 2026-10-11

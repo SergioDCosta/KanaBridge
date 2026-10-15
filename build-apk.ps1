@@ -79,6 +79,34 @@ Require-File $Zipalign "zipalign"
 Require-File $Apksigner "apksigner"
 Require-File $Manifest "AndroidManifest.xml"
 
+# Never replace the production identity with a newly generated certificate.
+$SigningPassword = $env:KANABRIDGE_KEYSTORE_PASSWORD
+if ([string]::IsNullOrWhiteSpace($SigningPassword)) {
+    throw "Define KANABRIDGE_KEYSTORE_PASSWORD no ambiente com a palavra-passe da tua chave privada."
+}
+$ExpectedReleaseCertificateSha256 = "6b378887f2d90168a704500de28bb44a3a6ab172c8c98ea2aed4538079dc0a77"
+if (-not (Test-Path -LiteralPath $Keystore -PathType Leaf)) {
+    if (-not ($Preview -or $Kanateste)) {
+        throw "Falta a chave original tools/kanabridge-release.jks. Restaura a cópia privada; não cries outra chave para publicar atualizações."
+    }
+    $Keystore = Join-Path $ToolsDir "kanabridge-development.jks"
+}
+if (-not ($Preview -or $Kanateste)) {
+    $CertificatePath = [IO.Path]::GetTempFileName()
+    try {
+        Invoke-Tool "Exportação do certificado público" $Keytool @(
+            "-exportcert", "-keystore", $Keystore, "-alias", "kanabridge",
+            "-storepass:env", "KANABRIDGE_KEYSTORE_PASSWORD", "-file", $CertificatePath
+        )
+        $ActualCertificateSha256 = (Get-FileHash -LiteralPath $CertificatePath -Algorithm SHA256).Hash.ToLowerInvariant()
+        if ($ActualCertificateSha256 -ne $ExpectedReleaseCertificateSha256) {
+            throw "Certificado de produção incorreto: $ActualCertificateSha256. Esperado: $ExpectedReleaseCertificateSha256. Usa a chave original das releases 5.0/5.1."
+        }
+    } finally {
+        Remove-Item -LiteralPath $CertificatePath -Force -ErrorAction SilentlyContinue
+    }
+}
+
 $JavaSources = @(Get-ChildItem -Path $JavaSourceDir -Filter "*.java" -File -Recurse |
     ForEach-Object { $_.FullName })
 if ($JavaSources.Count -eq 0) {
@@ -151,15 +179,13 @@ Invoke-Tool "Compressão do APK" (Require-Command "python") @((Join-Path $ToolsD
 Write-Host "A alinhar APK..."
 Invoke-Tool "zipalign" $Zipalign @("-f", "4", $UnsignedApk, $AlignedApk)
 
-# This is a local development signing key. It stays ignored by Git and is reused on later builds.
-# The password is never written to the console.
-$SigningPassword = "kanabridge-local"
+# Only independent development variants may generate a new key. Production was checked above.
 if (-not (Test-Path -LiteralPath $Keystore -PathType Leaf)) {
     Write-Host "A criar keystore local..."
     Invoke-Tool "keytool" $Keytool @(
         "-genkeypair", "-noprompt", "-storetype", "JKS",
-        "-keystore", $Keystore, "-storepass", $SigningPassword,
-        "-keypass", $SigningPassword, "-alias", "kanabridge",
+        "-keystore", $Keystore, "-storepass:env", "KANABRIDGE_KEYSTORE_PASSWORD",
+        "-keypass:env", "KANABRIDGE_KEYSTORE_PASSWORD", "-alias", "kanabridge",
         "-keyalg", "RSA", "-keysize", "2048", "-validity", "10000",
         "-dname", "CN=KanaBridge, OU=Offline Apps, O=KanaBridge, C=PT"
     )
