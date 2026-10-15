@@ -1,4 +1,4 @@
-# KanaBridge 5.2
+# KanaBridge 5.2.1
 
 Aplicação Android em português para converter rōmaji e consultar kana e palavras japonesas. Simples e offline, sem contas nem publicidade. A única ligação à Internet é a do conversor de euros para ienes, que pede a taxa do dia.
 
@@ -8,11 +8,23 @@ Aplicação Android em português para converter rōmaji e consultar kana e pala
 
 No Android, abre o APK e permite a instalação pela aplicação que o abriu. Para atualizar uma instalação existente, a assinatura tem de ser a mesma. Compatibilidade prevista: Android 6 ou superior (API 23); compilada para Android 16 (API 36).
 
+## Correções da 5.2.1
+
+Preparada para publicação; enquanto a nova release não for publicada, o download acima continua a apontar para a 5.2.0 com a assinatura diferente.
+
+- Assinatura original obrigatória, sem gerar automaticamente uma chave de produção; credenciais recebidas pelo ambiente e chaves de desenvolvimento fora do Git.
+- Taxas obtidas explicitamente do fornecedor BCE, com validação de valores/datas e descarte da cache anterior de origem não identificada.
+- Montantes com agrupamento inválido são rejeitados; formatação consistente entre idiomas do Android.
+- Mudanças do relógio deixam de bloquear a atualização da taxa; respostas de pedidos antigos não atualizam atividades destruídas.
+- Estado do antigo modo PT é limpo na restauração e o probe acompanha os dois modos atuais do dicionário.
+
+Validação local: 1 449 verificações Java, integridade SQLite, corpus de pesquisa, Referência e contraste aprovados. Instrumentação de interface compilada; sem teste físico nesta revisão porque não havia telemóvel ligado.
+
 ## Novidades da 5.2
 
 - **Euro → Iene:** novo separador com conversão direta entre euros e ienes (nos dois sentidos), a partir da taxa de referência do Banco Central Europeu, publicada nos dias úteis. A taxa é pedida ao abrir o separador (no máximo uma vez por hora) ou ao tocar em *Atualizar taxa*; a última fica guardada e a data aparece sempre junto do resultado. Sem ligação, usa a taxa guardada.
 - **Dicionário só em inglês e japonês:** removida a pesquisa em português e as pré-visualizações em português nos resultados e no detalhe. Os sentidos continuam em inglês, como no JMdict. A Referência de japonês mantém-se como secção própria.
-- **Assinatura:** o APK 5.2.0 inicialmente publicado usou um certificado diferente (`cc4971…ab3d`) e não atualiza instalações 5.0/5.1. A chave original (`6b3788…0a77`) foi localizada neste PC; não estava perdida. Este checkout voltou a exigir o certificado original nas compilações de produção. A correção local ainda não substituiu o APK da release pública. Não desinstales a instalação antiga para contornar esse conflito: a desinstalação apaga os dados locais. Uma instalação já feita com a chave diferente exige uma decisão de migração própria.
+- **Assinatura:** o APK 5.2.0 inicialmente publicado usou um certificado diferente (`cc4971…ab3d`) e não atualiza instalações 5.0/5.1. A chave original (`6b3788…0a77`) foi localizada neste PC; este checkout voltou a exigir esse certificado nas compilações de produção. A versão 5.2.1 prepara o regresso à assinatura original. Não desinstales a versão antiga para contornar o conflito: isso apaga os dados locais. Quem já instalou a 5.2.0 com a chave diferente não consegue atualizar diretamente para um APK com a chave original; essa migração precisa de ser tratada separadamente.
 - A app passa a declarar a permissão `INTERNET`, usada apenas para o pedido de câmbio (ver *Privacidade e dados*).
 
 ## Novidades da 5.1

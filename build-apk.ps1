@@ -162,7 +162,7 @@ if ($CompiledResources.Count -eq 0) {
 $LinkArguments = @(
     "link", "-I", $AndroidJar, "--manifest", $Manifest,
     "--min-sdk-version", $MinSdk, "--target-sdk-version", "36",
-    "--version-code", "7", "--version-name", "5.2.0",
+    "--version-code", "8", "--version-name", "5.2.1",
     "-A", (Join-Path $ProjectRoot "app\src\main\assets"),
     "-o", $UnsignedApk
 )

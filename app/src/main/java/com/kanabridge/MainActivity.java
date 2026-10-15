@@ -108,6 +108,7 @@ public final class MainActivity extends Activity {
             if (choices != null) for (int i = 0; i < choices.size(); i++) if (!choices.get(i).isEmpty()) composition.put(i, choices.get(i));
         }
         if (!java.util.Arrays.asList("converter", "kana", "reference", "dictionary", "saved", "settings", "sources", "word", "currency").contains(section)) section = "converter";
+        if (dictionaryMode < 0 || dictionaryMode > 1) { dictionaryMode = 0; dictionaryQuery = ""; }
         if (section.equals("word") && detailWord == null) section = "dictionary";
         getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
         getWindow().setStatusBarColor(Color.TRANSPARENT); getWindow().setNavigationBarColor(Color.BLACK);
@@ -742,7 +743,10 @@ public final class MainActivity extends Activity {
     // ---- Euro → iene -------------------------------------------------------------------------
     private void loadRate() {
         String stored = prefs.getString("rate_value", ""); String date = prefs.getString("rate_date", "");
-        try { if (!stored.isEmpty() && !date.isEmpty()) rate = new CurrencyConverter.Rate(Double.parseDouble(stored), date); } catch (NumberFormatException ignored) { rate = null; }
+        try { if (prefs.getString("rate_source", "").equals(CurrencyConverter.ENDPOINT) && !stored.isEmpty()) {
+            CurrencyConverter.Rate cached = new CurrencyConverter.Rate(Double.parseDouble(stored), date);
+            rate = CurrencyConverter.usable(cached) ? cached : null;
+        } } catch (NumberFormatException ignored) { rate = null; }
         rateFetched = prefs.getLong("rate_fetched", 0);
         currencyAmount = prefs.getString("currency_amount", ""); yenToEuro = prefs.getBoolean("currency_reverse", false);
     }
@@ -792,17 +796,18 @@ public final class MainActivity extends Activity {
     /** Downloads at most one small JSON document; a failure keeps whatever rate was stored before. */
     private void refreshRate(boolean force) {
         if (rateLoading) return;
-        if (!force && rate != null && System.currentTimeMillis() - rateFetched < 3600000L) { rateStatus = ""; updateCurrency(); return; }
+        if (!force && CurrencyConverter.fresh(rate, rateFetched, System.currentTimeMillis())) { rateStatus = ""; updateCurrency(); return; }
         rateLoading = true; rateStatus = "A atualizar a taxa…"; updateCurrency();
         new Thread(() -> {
             CurrencyConverter.Rate fresh = null;
             try { fresh = CurrencyConverter.fetch(); } catch (Exception ignored) { }
             final CurrencyConverter.Rate result = fresh;
             runOnUiThread(() -> {
+                if (isFinishing() || isDestroyed()) return;
                 rateLoading = false;
                 if (result != null) {
                     rate = result; rateFetched = System.currentTimeMillis();
-                    prefs.edit().putString("rate_value", Double.toString(result.yenPerEuro)).putString("rate_date", result.date).putLong("rate_fetched", rateFetched).apply();
+                    prefs.edit().putString("rate_source", CurrencyConverter.ENDPOINT).putString("rate_value", Double.toString(result.yenPerEuro)).putString("rate_date", result.date).putLong("rate_fetched", rateFetched).apply();
                     rateStatus = "Atualizada agora.";
                 } else if (rate != null) rateStatus = "Sem ligação. A usar a taxa guardada de " + CurrencyConverter.formatDate(rate.date) + ".";
                 else rateStatus = "Sem taxa guardada. Liga-te à Internet uma vez para obter a primeira.";

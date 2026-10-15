@@ -1,11 +1,14 @@
 # Changelog
 
-## Correção local de assinatura — ainda não publicada
+## 5.2.1 — preparada para publicação
 
-- Chave original das releases 5.0/5.1 localizada e validada contra o APK público 5.1.0. O APK 5.2.0 foi recompilado localmente com esse certificado.
-- Compilação de produção recusa chave ausente ou diferente; apenas variantes independentes podem gerar uma chave de desenvolvimento. Palavra-passe recebida por variável de ambiente.
-- Probe ajustado aos dois modos de pesquisa da 5.2, sem a consulta PT removida.
-- Validação: 1 431 verificações Java, SQLite/pesquisa/Referência/contraste aprovados; guardas testadas com chave ausente e certificado incorreto. APK final assinado, versão 5.2.0/code 7; sem teste físico nesta revisão porque não havia dispositivo ligado.
+- Recuperada a chave original 5.0/5.1. Compilação de produção recusa chave ausente ou diferente; palavra-passe recebida por variável de ambiente. A 5.2.0 pública permanece como registo da troca de certificado; quem a instalou com a outra chave não atualiza diretamente para a assinatura original.
+- Corrigida a origem da taxa de câmbio: fornecedor BCE explícito, em vez da taxa combinada de vários fornecedores. Cache identifica a origem e rejeita valores inválidos/datas impossíveis.
+- Corrigida a aceitação de montantes mal agrupados, números de taxa parcialmente interpretados, expiração da cache após mudança de relógio e formatação dependente do idioma do dispositivo.
+- Respostas de câmbio ignoradas após destruição da atividade. Restauração limpa o antigo modo PT; probe ajustado aos dois modos de pesquisa existentes.
+- Chave de desenvolvimento ignorada pelo Git, mantendo a chave original privada.
+- Validação: 1 449 verificações Java e testes SQLite/pesquisa/Referência/contraste aprovados; guardas de assinatura exercitadas com chave ausente/certificado incorreto. Instrumentação de interface compilada. Sem teste físico nesta revisão.
+- VersionCode 8; compilação/publicação do APK aguarda autorização para usar a credencial de assinatura existente.
 
 ## 5.2.0 — 2026-10-14
 

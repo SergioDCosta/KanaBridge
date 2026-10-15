@@ -64,6 +64,27 @@ public final class CurrencyConverterTest {
         check(CurrencyConverter.ENDPOINT.startsWith("https://"), "endpoint uses https");
         check(CurrencyConverter.ENDPOINT.endsWith("/EUR/JPY"), "endpoint asks for EUR/JPY only");
 
+        // Regressions found in the 5.2 review.
+        amount("1,2,3", -1); amount("1.2.3,45", -1); amount("1,23.45", -1);
+        amount("1.234.567", 1234567); amount("1,234,567.89", 1234567.89);
+        check(CurrencyConverter.parse("{\"rate\":1e2,\"date\":\"2026-10-14\"}").yenPerEuro == 100, "scientific notation is not silently truncated");
+        check(CurrencyConverter.parse("{\"rate\":1e+,\"date\":\"2026-10-14\"}") == null, "malformed exponent rejected");
+        check(CurrencyConverter.parse("{\"rate\":180garbage,\"date\":\"2026-10-14\"}") == null, "partial rate rejected");
+        check(CurrencyConverter.parse("{\"rate\":180,\"date\":\"2026-02-30\"}") == null, "impossible date rejected");
+        check(CurrencyConverter.parse("{\"rate\":180,\"date\":\"2024-02-29\"}") != null, "valid leap date accepted");
+        check(!CurrencyConverter.usable(new CurrencyConverter.Rate(Double.NaN,"2026-10-14")), "cached NaN rejected");
+        check(!CurrencyConverter.usable(new CurrencyConverter.Rate(0,"2026-10-14")), "cached zero rejected");
+        check(!CurrencyConverter.usable(new CurrencyConverter.Rate(Double.POSITIVE_INFINITY,"2026-10-14")), "cached infinity rejected");
+        check(CurrencyConverter.fresh(fixed,1000,2000), "recent cache accepted");
+        check(!CurrencyConverter.fresh(fixed,3000,2000), "clock rollback triggers refresh");
+        check(!CurrencyConverter.fresh(fixed,1000,3601000), "hour-old cache expires");
+        check(CurrencyConverter.ENDPOINT.contains("/providers/ecb/"), "BCE label uses BCE provider");
+        java.util.Locale previous = java.util.Locale.getDefault();
+        try {
+            java.util.Locale.setDefault(new java.util.Locale("ar"));
+            same("100,05", CurrencyConverter.formatEuro(100.05), "format independent of device locale");
+        } finally { java.util.Locale.setDefault(previous); }
+
         System.out.println("OK: " + count + " currency assertions");
     }
 }

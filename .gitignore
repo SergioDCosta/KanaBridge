@@ -5,3 +5,5 @@
 
 # Chave de assinatura local (necessária para futuras atualizações da app)
 /tools/kanabridge-release.jks
+
+/tools/kanabridge-development.jks
