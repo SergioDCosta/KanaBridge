@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.2.1 — preparada para publicação
+## 5.2.1 — 2026-10-15
 
 - Recuperada a chave original 5.0/5.1. Compilação de produção recusa chave ausente ou diferente; palavra-passe recebida por variável de ambiente. A 5.2.0 pública permanece como registo da troca de certificado; quem a instalou com a outra chave não atualiza diretamente para a assinatura original.
 - Corrigida a origem da taxa de câmbio: fornecedor BCE explícito, em vez da taxa combinada de vários fornecedores. Cache identifica a origem e rejeita valores inválidos/datas impossíveis.
@@ -8,7 +8,7 @@
 - Respostas de câmbio ignoradas após destruição da atividade. Restauração limpa o antigo modo PT; probe ajustado aos dois modos de pesquisa existentes.
 - Chave de desenvolvimento ignorada pelo Git, mantendo a chave original privada.
 - Validação: 1 449 verificações Java e testes SQLite/pesquisa/Referência/contraste aprovados; guardas de assinatura exercitadas com chave ausente/certificado incorreto. Instrumentação de interface compilada. Sem teste físico nesta revisão.
-- VersionCode 8; compilação/publicação do APK aguarda autorização para usar a credencial de assinatura existente.
+- APK principal 5.2.1 (versionCode 8), compilado, assinatura original verificada e publicado na release GitHub.
 
 ## 5.2.0 — 2026-10-14
 

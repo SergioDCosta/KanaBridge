@@ -10,7 +10,7 @@ No Android, abre o APK e permite a instalação pela aplicação que o abriu. Pa
 
 ## Correções da 5.2.1
 
-Preparada para publicação; enquanto a nova release não for publicada, o download acima continua a apontar para a 5.2.0 com a assinatura diferente.
+A release 5.2.1 está disponível no download acima, com a assinatura original das versões 5.0/5.1.
 
 - Assinatura original obrigatória, sem gerar automaticamente uma chave de produção; credenciais recebidas pelo ambiente e chaves de desenvolvimento fora do Git.
 - Taxas obtidas explicitamente do fornecedor BCE, com validação de valores/datas e descarte da cache anterior de origem não identificada.
@@ -24,7 +24,7 @@ Validação local: 1 449 verificações Java, integridade SQLite, corpus de pesq
 
 - **Euro → Iene:** novo separador com conversão direta entre euros e ienes (nos dois sentidos), a partir da taxa de referência do Banco Central Europeu, publicada nos dias úteis. A taxa é pedida ao abrir o separador (no máximo uma vez por hora) ou ao tocar em *Atualizar taxa*; a última fica guardada e a data aparece sempre junto do resultado. Sem ligação, usa a taxa guardada.
 - **Dicionário só em inglês e japonês:** removida a pesquisa em português e as pré-visualizações em português nos resultados e no detalhe. Os sentidos continuam em inglês, como no JMdict. A Referência de japonês mantém-se como secção própria.
-- **Assinatura:** o APK 5.2.0 inicialmente publicado usou um certificado diferente (`cc4971…ab3d`) e não atualiza instalações 5.0/5.1. A chave original (`6b3788…0a77`) foi localizada neste PC; este checkout voltou a exigir esse certificado nas compilações de produção. A versão 5.2.1 prepara o regresso à assinatura original. Não desinstales a versão antiga para contornar o conflito: isso apaga os dados locais. Quem já instalou a 5.2.0 com a chave diferente não consegue atualizar diretamente para um APK com a chave original; essa migração precisa de ser tratada separadamente.
+- **Assinatura:** o APK 5.2.0 inicialmente publicado usou um certificado diferente (`cc4971…ab3d`) e não atualiza instalações 5.0/5.1. A chave original (`6b3788…0a77`) foi localizada neste PC; este checkout voltou a exigir esse certificado nas compilações de produção. A versão 5.2.1 regressa à assinatura original e atualiza diretamente as instalações 5.0/5.1. Não desinstales a versão antiga para contornar o conflito: isso apaga os dados locais. Quem já instalou a 5.2.0 com a chave diferente não consegue atualizar diretamente para um APK com a chave original; essa migração precisa de ser tratada separadamente.
 - A app passa a declarar a permissão `INTERNET`, usada apenas para o pedido de câmbio (ver *Privacidade e dados*).
 
 ## Novidades da 5.1
